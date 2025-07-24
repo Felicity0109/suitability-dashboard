@@ -78,16 +78,23 @@ if crop_file and climate_file:
 
     # --- Suitability Map ---
     st.subheader("Suitability Map")
+    color_map = {
+    "High": "green",
+    "Moderate": "orange",
+    "Low": "red"
+}
+
     fig_map = px.scatter_mapbox(
-        filtered_df,
-        lat="y",
-        lon="x",
-        color="Suitability Category",
-        hover_name="Crop Name",
-        mapbox_style="carto-positron",
-        zoom=5,
-        height=500
-    )
+    filtered_df,
+    lat="y",
+    lon="x",
+    color="Suitability Category",
+    color_discrete_map=color_map,
+    hover_name="Crop Name",
+    mapbox_style="carto-positron",
+    zoom=5,
+    height=500
+)
     st.plotly_chart(fig_map, use_container_width=True)
 
     # --- Suitability Histogram ---
