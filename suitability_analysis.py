@@ -10,7 +10,7 @@ st.set_page_config(page_title="Crop Suitability Dashboard", layout="wide")
 
 # --- App Title ---
 st.title("Biogenic Crop Suitability Dashboard")
-st.markdown("Upload a climate dataset for a South African province to assess the suitability of crops to be grown in the area.")
+st.markdown("⚠️ Note: This tool provides an initial crop suitability estimate based on your data. Results are indicative and should be verified with local expertise. Ensure your data is accurate for best outcomes.")
 
 # --- Upload Inputs ---
 st.sidebar.header("Upload Data")
