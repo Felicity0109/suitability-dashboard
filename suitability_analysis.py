@@ -16,6 +16,16 @@ st.markdown("Upload a climate dataset for a South African province to assess the
 st.sidebar.header("Upload Data")
 crop_file = st.sidebar.file_uploader("Upload Crop Data (.xlsx)", type=["xlsx"])
 climate_file = st.sidebar.file_uploader("Upload Climate Data for Province (.xlsx)", type=["xlsx"])
+if uploaded_crop_file and uploaded_climate_file:
+    with st.spinner("Processing data... Please wait."):
+        # Read uploaded files
+        crop_df = pd.read_excel(uploaded_crop_file)
+        climate_df = pd.read_excel(uploaded_climate_file)
+
+        # Process data
+        processed_df = process_data(crop_df, climate_df)
+
+        st.success("Data successfully processed.")
 
 # --- Load Data ---
 def load_crop_data(file):
@@ -74,19 +84,18 @@ if crop_file and climate_file:
     filtered_df = suitability_df[suitability_df['Crop Name'].isin(selected_crops)]
 
     # --- Suitability Map ---
-    st.subheader("Suitability Map")
-    fig_map = px.scatter_mapbox(
-        filtered_df,
-        lat="y",
-        lon="x",
-        color="Suitability Category",
-        hover_name="Crop Name",
-        mapbox_style="carto-positron",
-        zoom=5,
-        height=500,
-        facet_col="Crop Name"
-    )
-    st.plotly_chart(fig_map, use_container_width=True)
+st.subheader("Suitability Map")
+fig_map = px.scatter_mapbox(
+    filtered_df,
+    lat="y",
+    lon="x",
+    color="Suitability Category",
+    hover_name="Crop Name",
+    mapbox_style="carto-positron",
+    zoom=5,
+    height=500
+)
+st.plotly_chart(fig_map, use_container_width=True)
 
     # --- Suitability Histogram ---
     st.subheader("Suitability Score Distribution")
