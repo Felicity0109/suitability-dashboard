@@ -216,19 +216,34 @@ if crop_file and climate_files:
 
     for _, row in filtered_df.iterrows():
        crop_row = crop_df[crop_df["Crop Name"] == row["Crop Name"]].iloc[0]
-       failure_reason = get_failure_reason(row, crop_row)
-       matched_params = 9 - failure_reason.count(",") if failure_reason != "None" else 9
+    
+    # Get the original climate row from combined_climate_df using x, y, and source_file
+       matching_climate_row = combined_climate_df[
+           (combined_climate_df["x"] == row["x"]) &
+           (combined_climate_df["y"] == row["y"]) &
+           (combined_climate_df["source_file"] == row["source_file"])
+       ]
+    
+       if not matching_climate_row.empty:
+           climate_row = matching_climate_row.iloc[0]
+           failure_reason = get_failure_reason(climate_row, crop_row)
+           matched_params = 9 - failure_reason.count(",") if failure_reason != "None" else 9
+       else:
+           failure_reason = "Unavailable"
+           matched_params = "N/A"
+
        summary_rows.append({
-        "Crop Name": row["Crop Name"],
-        "Suitability Category": row["Suitability Category"],
-        "Grid Number on map": row["Grid Number on map"],
-        "Fallow land area (ha)": row["Fallow land area"],
-        "Matched Parameters": matched_params,
-        "Failed Parameters": failure_reason
+           "Crop Name": row["Crop Name"],
+           "Grid Number on map": f"{row['x']}_{row['y']}",
+           "Suitability Category": row["Suitability Category"],
+           "Fallow Land Area (ha)": row["area_ha"],
+           "Matched Parameters": matched_params,
+           "Failed Parameters": failure_reason,
+           "Failure Reason": failure_reason
        })
 
     summary_df = pd.DataFrame(summary_rows)
-    st.dataframe(summary_df, use_container_width=True)
+    st.dataframe(summary_df)
 
     # --- Download Button ---
     st.subheader("Download Results")
@@ -245,8 +260,8 @@ if crop_file and climate_files:
         mime="application/vnd.openxmlformats-officedocument.spreadsheetml.sheet"
     )
 
-else:
-    st.info("Please upload both crop and climate datasets to begin.")
+    else:
+        st.info("Please upload both crop and climate datasets to begin.")
 
 
 # --- Footer ---
