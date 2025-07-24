@@ -25,41 +25,68 @@ def load_climate_data(file):
     return pd.read_excel(file)
 
 # --- Suitability Calculation ---
-def calculate_suitability(climate_df, crop_df):
-    results = []
-    for _, crop in crop_df.iterrows():
-        crop_name = crop['Crop Name']
-        match_scores = []
-        for _, row in climate_df.iterrows():
-            score = sum([
-                row['Rainfall Min'] >= crop['Rainfall Min'],
-                row['Rainfall Max'] <= crop['Rainfall Max'],
-                row['Temp Min'] >= crop['Temp Min'],
-                row['Temp Max'] <= crop['Temp Max'],
-                row['Drought Tolerance'] == crop['Drought Tolerance'],
-                row['Suitable Köppen Zones'] == crop['Suitable Köppen Zones'],
-                row['Soil Texture'] == crop['Soil Texture'],
-                row['Drainage Preference'] == crop['Drainage Preference'],
-                row['Irrigation Need'] == crop['Irrigation Need']
-            ])
-            results.append({
-                'Crop Name': crop_name,
-                'x': row['x'],
-                'y': row['y'],
-                'Suitability Score': score
-            })
-    return pd.DataFrame(results)
+def check_failures(row, crop):
+    failures = []
+    if not (row['Rainfall Min'] >= crop['Rainfall Min']):
+        failures.append('Rainfall Min')
+    if not (row['Rainfall Max'] <= crop['Rainfall Max']):
+        failures.append('Rainfall Max')
+    if not (row['Temp Min'] >= crop['Temp Min']):
+        failures.append('Temp Min')
+    if not (row['Temp Max'] <= crop['Temp Max']):
+        failures.append('Temp Max')
+    if row['Drought Tolerance'] != crop['Drought Tolerance']:
+        failures.append('Drought Tolerance')
+    if row['Suitable Köppen Zones'] != crop['Suitable Köppen Zones']:
+        failures.append('Suitable Köppen Zones')
+    if row['Soil Texture'] != crop['Soil Texture']:
+        failures.append('Soil Texture')
+    if row['Drainage Preference'] != crop['Drainage Preference']:
+        failures.append('Drainage Preference')
+    if row['Irrigation Need'] != crop['Irrigation Need']:
+        failures.append('Irrigation Need')
+    return ', '.join(failures) if failures else 'None'
 
-# --- Suitability Category ---
+results = []
+for _, crop in crop_df.iterrows():
+    crop_name = crop['Crop Name']
+    for _, row in climate_df.iterrows():
+        score = sum([
+            row['Rainfall Min'] >= crop['Rainfall Min'],
+            row['Rainfall Max'] <= crop['Rainfall Max'],
+            row['Temp Min'] >= crop['Temp Min'],
+            row['Temp Max'] <= crop['Temp Max'],
+            row['Drought Tolerance'] == crop['Drought Tolerance'],
+            row['Suitable Köppen Zones'] == crop['Suitable Köppen Zones'],
+            row['Soil Texture'] == crop['Soil Texture'],
+            row['Drainage Preference'] == crop['Drainage Preference'],
+            row['Irrigation Need'] == crop['Irrigation Need']
+        ])
+
+        failures = check_failures(row, crop)
+
+        results.append({
+            'Crop Name': crop_name,
+            'x': row['x'],
+            'y': row['y'],
+            'Suitability Score': score,
+            'Failure Reasons': failures
+        })
+
+suitability_df = pd.DataFrame(results)
+
+# Optionally add a category column
 def categorize_score(score):
     if score >= 7:
         return 'High'
     elif score >= 4:
         return 'Moderate'
-    elif score >= 0:
+    elif score >= 1:
         return 'Low'
     else:
         return 'Unsuitable'
+
+suitability_df['Suitability Category'] = suitability_df['Suitability Score'].apply(categorize_score)
 
 # --- Main Logic ---
 if crop_file and climate_file:
