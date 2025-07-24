@@ -191,8 +191,33 @@ if crop_file and climate_files:
 
     # Summary table
     st.subheader("Summary Table")
-    summary = filtered_df.groupby("Crop Name")["Suitability Score"].agg(['mean', 'min', 'max', 'count']).reset_index()
-    st.dataframe(summary, use_container_width=True)
+    # Create summary DataFrame
+    summary_rows = []
+    for idx, row in final_df.iterrows():
+        crop = row["Crop Name"]
+        grid_id = row["Grid Number on map"]
+        score = row["Suitability Score"]
+        category = row["Suitability Category"]
+        area = row.get("Fallow land area", "N/A")
+
+        # Extract mismatched and matched parameters (assuming these are saved per row)
+        failed = row.get("Failed Parameters", "None")
+        passed = row.get("Matched Parameters", "None")
+        failure_reason = row.get("Failure Reason", "N/A")
+
+        summary_rows.append({
+        "Crop Name": crop,
+        "Grid ID": grid_id,
+        "Suitability Score": score,
+        "Suitability Category": category,
+        "Fallow Land Area (ha)": area,
+        "Matched Parameters": passed,
+        "Failed Parameters": failed,
+        "Reason for Failure": failure_reason
+        })
+
+    summary_df = pd.DataFrame(summary_rows)
+    st.dataframe(summary_df, use_container_width=True)
 
     # --- Download Button ---
     st.subheader("Download Results")
