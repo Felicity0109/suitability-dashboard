@@ -9,7 +9,7 @@ from io import BytesIO
 st.set_page_config(page_title="Crop Suitability Assessment Tool (CSAT)", layout="wide")
 
 # --- App Title ---
-st.title("Biogenic Crop Suitability Dashboard")
+st.title("Crop Suitability Assessment Tool (CSAT)")
 st.markdown("⚠️ Note: This tool provides an initial crop suitability estimate based on your data. Results are indicative. Ensure your data is accurate for best outcomes.")
 st.warning("Ensure your input Excel files follow the required format and naming convention: '<Province abbreviation>_coordinates.xlsx'.")
 
