@@ -15,7 +15,7 @@ st.markdown("⚠️ Note: This tool provides an initial crop suitability estimat
 # --- Upload Inputs ---
 st.sidebar.header("Upload Data")
 crop_file = st.sidebar.file_uploader("Upload Crop Data (.xlsx)", type=["xlsx"])
-climate_file = st.sidebar.file_uploader("Upload Climate Data for Province (.xlsx)", type=["xlsx"])
+climate_file = st.sidebar.file_uploader("Upload Climate Data for Province (.xlsx)", type=["xlsx"], accept_multiple_files=True)
 
 # --- Load Data ---
 def load_crop_data(file):
