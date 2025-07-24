@@ -11,6 +11,7 @@ st.set_page_config(page_title="Crop Suitability Assessment Tool (CSAT)", layout=
 # --- App Title ---
 st.title("Biogenic Crop Suitability Dashboard")
 st.markdown("⚠️ Note: This tool provides an initial crop suitability estimate based on your data. Results are indicative. Ensure your data is accurate for best outcomes.")
+st.warning("Ensure your input Excel files follow the required format and naming convention: '<Province abbreviation>_coordinates.xlsx'.")
 
 # --- Upload Inputs ---
 st.sidebar.header("Upload Data")
@@ -93,6 +94,25 @@ def categorize_score(score):
         return 'Low'
     else:
         return 'Unsuitable'
+
+    # Identify mismatched and matched parameters for each row
+def get_failure_reason(row, crop):
+    reasons = []
+    if row["Rainfall Min"] < crop["Rainfall Min"] or row["Rainfall Max"] > crop["Rainfall Max"]:
+        reasons.append("Rainfall")
+    if row["Temp Min"] < crop["Temp Min"] or row["Temp Max"] > crop["Temp Max"]:
+        reasons.append("Temperature")
+    if crop["Drought Tolerance"] != "Any" and row["Drought Tolerance"] != crop["Drought Tolerance"]:
+        reasons.append("Drought Tolerance")
+    if crop["Suitable Köppen Zones"] not in row["Suitable Köppen Zones"]:
+        reasons.append("Köppen Zone")
+    if crop["Soil Texture"] not in row["Soil Texture"]:
+        reasons.append("Soil Texture")
+    if crop["Drainage Preference"] not in row["Drainage Preference"]:
+        reasons.append("Drainage")
+    if crop["Irrigation Need"] != "Any" and row["Irrigation Need"] != crop["Irrigation Need"]:
+        reasons.append("Irrigation")
+    return ", ".join(reasons) if reasons else "None"
         
 # --- Main Logic ---
 if crop_file and climate_files:
@@ -193,28 +213,19 @@ if crop_file and climate_files:
     st.subheader("Summary Table")
     # Create summary DataFrame
     summary_rows = []
-    for idx, row in final_df.iterrows():
-        crop = row["Crop Name"]
-        grid_id = row["Grid Number on map"]
-        score = row["Suitability Score"]
-        category = row["Suitability Category"]
-        area = row.get("Fallow land area", "N/A")
 
-        # Extract mismatched and matched parameters (assuming these are saved per row)
-        failed = row.get("Failed Parameters", "None")
-        passed = row.get("Matched Parameters", "None")
-        failure_reason = row.get("Failure Reason", "N/A")
-
-        summary_rows.append({
-        "Crop Name": crop,
-        "Grid ID": grid_id,
-        "Suitability Score": score,
-        "Suitability Category": category,
-        "Fallow Land Area (ha)": area,
-        "Matched Parameters": passed,
-        "Failed Parameters": failed,
-        "Reason for Failure": failure_reason
-        })
+    for _, row in filtered_df.iterrows():
+       crop_row = crop_df[crop_df["Crop Name"] == row["Crop Name"]].iloc[0]
+       failure_reason = get_failure_reason(row, crop_row)
+       matched_params = 9 - failure_reason.count(",") if failure_reason != "None" else 9
+       summary_rows.append({
+        "Crop Name": row["Crop Name"],
+        "Suitability Category": row["Suitability Category"],
+        "Grid Number on map": row["Grid Number on map"],
+        "Fallow land area (ha)": row["Fallow land area"],
+        "Matched Parameters": matched_params,
+        "Failed Parameters": failure_reason
+       })
 
     summary_df = pd.DataFrame(summary_rows)
     st.dataframe(summary_df, use_container_width=True)
@@ -229,7 +240,7 @@ if crop_file and climate_files:
 
     st.download_button(
         label="Download Filtered Results as Excel",
-        data=convert_df(filtered_df),
+        data=convert_df(summary_df),
         file_name="suitability_results.xlsx",
         mime="application/vnd.openxmlformats-officedocument.spreadsheetml.sheet"
     )
