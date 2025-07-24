@@ -6,7 +6,7 @@ import seaborn as sns
 import matplotlib.pyplot as plt
 from io import BytesIO
 
-st.set_page_config(page_title="Crop Suitability Dashboard", layout="wide")
+st.set_page_config(page_title="Crop Suitability Assessment Tool (CSAT)", layout="wide")
 
 # --- App Title ---
 st.title("Biogenic Crop Suitability Dashboard")
