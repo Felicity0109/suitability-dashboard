@@ -16,16 +16,6 @@ st.markdown("Upload a climate dataset for a South African province to assess the
 st.sidebar.header("Upload Data")
 crop_file = st.sidebar.file_uploader("Upload Crop Data (.xlsx)", type=["xlsx"])
 climate_file = st.sidebar.file_uploader("Upload Climate Data for Province (.xlsx)", type=["xlsx"])
-if uploaded_crop_file and uploaded_climate_file:
-    with st.spinner("Processing data... Please wait."):
-        # Read uploaded files
-        crop_df = pd.read_excel(uploaded_crop_file)
-        climate_df = pd.read_excel(uploaded_climate_file)
-
-        # Process data
-        processed_df = process_data(crop_df, climate_df)
-
-        st.success("Data successfully processed.")
 
 # --- Load Data ---
 def load_crop_data(file):
@@ -73,29 +63,32 @@ def categorize_score(score):
 
 # --- Main Logic ---
 if crop_file and climate_file:
-    crop_df = load_crop_data(crop_file)
-    climate_df = load_climate_data(climate_file)
+    with st.spinner("Processing data... Please wait."):
+        crop_df = load_crop_data(crop_file)
+        climate_df = load_climate_data(climate_file)
 
-    suitability_df = calculate_suitability(climate_df, crop_df)
-    suitability_df['Suitability Category'] = suitability_df['Suitability Score'].apply(categorize_score)
+        suitability_df = calculate_suitability(climate_df, crop_df)
+        suitability_df['Suitability Category'] = suitability_df['Suitability Score'].apply(categorize_score)
+
+    st.success("Data successfully processed.")
 
     # --- Crop Selector ---
     selected_crops = st.multiselect("Select Crops to Compare", crop_df['Crop Name'].unique(), default=crop_df['Crop Name'].unique()[0])
     filtered_df = suitability_df[suitability_df['Crop Name'].isin(selected_crops)]
 
     # --- Suitability Map ---
-st.subheader("Suitability Map")
-fig_map = px.scatter_mapbox(
-    filtered_df,
-    lat="y",
-    lon="x",
-    color="Suitability Category",
-    hover_name="Crop Name",
-    mapbox_style="carto-positron",
-    zoom=5,
-    height=500
-)
-st.plotly_chart(fig_map, use_container_width=True)
+    st.subheader("Suitability Map")
+    fig_map = px.scatter_mapbox(
+        filtered_df,
+        lat="y",
+        lon="x",
+        color="Suitability Category",
+        hover_name="Crop Name",
+        mapbox_style="carto-positron",
+        zoom=5,
+        height=500
+    )
+    st.plotly_chart(fig_map, use_container_width=True)
 
     # --- Suitability Histogram ---
     st.subheader("Suitability Score Distribution")
@@ -127,6 +120,7 @@ st.plotly_chart(fig_map, use_container_width=True)
 
 else:
     st.info("Please upload both crop and climate datasets to begin.")
+
 
 # --- Footer ---
 st.markdown("---")
