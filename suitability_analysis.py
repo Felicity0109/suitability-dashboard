@@ -115,6 +115,7 @@ def get_failure_reason(row, crop):
     return ", ".join(reasons) if reasons else "None"
         
 # --- Main Logic ---
+# --- Main Logic ---
 if crop_file and climate_files:
     with st.spinner("Processing data... Please wait."):
         crop_df = load_crop_data(crop_file)
@@ -215,38 +216,39 @@ if crop_file and climate_files:
     summary_rows = []
 
     for _, row in filtered_df.iterrows():
-       crop_row = crop_df[crop_df["Crop Name"] == row["Crop Name"]].iloc[0]
-    
-    # Get the original climate row from combined_climate_df using x, y, and source_file
-       matching_climate_row = combined_climate_df[
-           (combined_climate_df["x"] == row["x"]) &
-           (combined_climate_df["y"] == row["y"]) &
-           (combined_climate_df["source_file"] == row["source_file"])
-       ]
-    
-       if not matching_climate_row.empty:
-           climate_row = matching_climate_row.iloc[0]
-           failure_reason = get_failure_reason(climate_row, crop_row)
-           matched_params = 9 - failure_reason.count(",") if failure_reason != "None" else 9
-       else:
-           failure_reason = "Unavailable"
-           matched_params = "N/A"
+        crop_row = crop_df[crop_df["Crop Name"] == row["Crop Name"]].iloc[0]
+        
+        # Get the original climate row from combined_climate_df using x, y, and source_file
+        matching_climate_row = combined_climate_df[
+            (combined_climate_df["x"] == row["x"]) &
+            (combined_climate_df["y"] == row["y"]) &
+            (combined_climate_df["source_file"] == row["source_file"])
+        ]
+        
+        if not matching_climate_row.empty:
+            climate_row = matching_climate_row.iloc[0]
+            failure_reason = get_failure_reason(climate_row, crop_row)
+            matched_params = 9 - failure_reason.count(",") if failure_reason != "None" else 9
+        else:
+            failure_reason = "Unavailable"
+            matched_params = "N/A"
 
-       summary_rows.append({
-           "Crop Name": row["Crop Name"],
-           "Grid Number on map": f"{row['x']}_{row['y']}",
-           "Suitability Category": row["Suitability Category"],
-           "Fallow Land Area (ha)": row["area_ha"],
-           "Matched Parameters": matched_params,
-           "Failed Parameters": failure_reason,
-           "Failure Reason": failure_reason
-       })
+        summary_rows.append({
+            "Crop Name": row["Crop Name"],
+            "Grid Number on map": f"{row['x']}_{row['y']}",
+            "Suitability Category": row["Suitability Category"],
+            "Fallow Land Area (ha)": row["area_ha"],
+            "Matched Parameters": matched_params,
+            "Failed Parameters": failure_reason,
+            "Failure Reason": failure_reason
+        })
 
     summary_df = pd.DataFrame(summary_rows)
     st.dataframe(summary_df)
 
     # --- Download Button ---
     st.subheader("Download Results")
+
     def convert_df(df):
         output = BytesIO()
         with pd.ExcelWriter(output, engine='xlsxwriter') as writer:
@@ -260,9 +262,8 @@ if crop_file and climate_files:
         mime="application/vnd.openxmlformats-officedocument.spreadsheetml.sheet"
     )
 
-    else:
-        st.info("Please upload both crop and climate datasets to begin.")
-
+else:
+    st.info("Please upload both crop and climate datasets to begin.")
 
 # --- Footer ---
 st.markdown("---")
