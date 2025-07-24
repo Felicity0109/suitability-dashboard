@@ -98,23 +98,50 @@ def categorize_score(score):
     # Identify mismatched and matched parameters for each row
 def get_failure_reason(row, crop):
     reasons = []
+
+    # Rainfall check
     if row["Rainfall Min"] < crop["Rainfall Min"] or row["Rainfall Max"] > crop["Rainfall Max"]:
         reasons.append("Rainfall")
+
+    # Temperature check
     if row["Temp Min"] < crop["Temp Min"] or row["Temp Max"] > crop["Temp Max"]:
         reasons.append("Temperature")
+
+    # Drought tolerance check
     if crop["Drought Tolerance"] != "Any" and row["Drought Tolerance"] != crop["Drought Tolerance"]:
         reasons.append("Drought Tolerance")
-    if crop["Suitable Köppen Zones"] not in row["Suitable Köppen Zones"]:
+
+    # Suitable Köppen Zones check: parse strings to int lists
+    try:
+        crop_zones = [int(z.strip()) for z in str(crop["Suitable Köppen Zones"]).split(",")]
+    except ValueError:
+        crop_zones = []
+    try:
+        row_zones = [int(z.strip()) for z in str(row["Suitable Köppen Zones"]).split(",")]
+    except ValueError:
+        row_zones = []
+
+    if not set(crop_zones).intersection(set(row_zones)):
         reasons.append("Köppen Zone")
-    if crop["Soil Texture"] not in row["Soil Texture"]:
+
+    # Soil Texture check (assuming similar comma-separated string; adjust if needed)
+    crop_soil = [s.strip() for s in str(crop["Soil Texture"]).split(",")]
+    row_soil = [s.strip() for s in str(row["Soil Texture"]).split(",")]
+    if not any(soil in row_soil for soil in crop_soil):
         reasons.append("Soil Texture")
-    if crop["Drainage Preference"] not in row["Drainage Preference"]:
+
+    # Drainage Preference check (assuming similar comma-separated string)
+    crop_drainage = [d.strip() for d in str(crop["Drainage Preference"]).split(",")]
+    row_drainage = [d.strip() for d in str(row["Drainage Preference"]).split(",")]
+    if not any(drain in row_drainage for drain in crop_drainage):
         reasons.append("Drainage")
+
+    # Irrigation Need check
     if crop["Irrigation Need"] != "Any" and row["Irrigation Need"] != crop["Irrigation Need"]:
         reasons.append("Irrigation")
+
     return ", ".join(reasons) if reasons else "None"
-        
-# --- Main Logic ---
+
 # --- Main Logic ---
 if crop_file and climate_files:
     with st.spinner("Processing data... Please wait."):
