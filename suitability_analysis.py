@@ -157,14 +157,12 @@ if crop_file and climate_files:
     with st.spinner("Processing data... Please wait."):
         crop_df = load_crop_data(crop_file)
 
-        combined_climate_df = pd.DataFrame()
         dfs = []
         for f in climate_files:
             temp_df = pd.read_excel(f)
             temp_df['source_file'] = f.name
             dfs.append(temp_df)
-        if dfs:
-            combined_climate_df = pd.concat(dfs, ignore_index=True)
+        combined_climate_df = pd.concat(dfs, ignore_index=True) if dfs else pd.DataFrame()
 
         if "Fallow land area" in combined_climate_df.columns:
             combined_climate_df.rename(columns={"Fallow land area": "area_ha"}, inplace=True)
@@ -223,10 +221,9 @@ if crop_file and climate_files:
     filtered_df["Shape"] = filtered_df["area_ha"].apply(get_area_shape)
 
     st.subheader("Suitability Map")
-    color_map = {"High": "green", "Moderate": "orange", "Low": "red", "Unsuitable": "gray"}
     st.markdown(f"Showing areas between **{selected_area_range[0]} ha** and **{selected_area_range[1]} ha**")
-    
-    fig = px.scatter_mapbox(
+
+    fig_map = px.scatter_mapbox(
         filtered_df,
         lat="y",
         lon="x",
@@ -236,7 +233,7 @@ if crop_file and climate_files:
         zoom=5,
         height=600,
         mapbox_style="carto-positron"
-       )
+    )
 
     st.plotly_chart(fig_map, use_container_width=True)
 
@@ -248,33 +245,33 @@ if crop_file and climate_files:
     st.pyplot(fig)
 
     st.subheader("Summary Table")
-    # Create a combined grid identifier for grouping
     filtered_df['Grid Number on map'] = filtered_df['x'].astype(str) + "_" + filtered_df['y'].astype(str)
 
-    # Aggregate by 'Grid Number on map'
+    def get_top_5_failure_reasons(group):
+        all_reasons = group['Failure Reasons'].dropna().str.split(', ')
+        flat = [reason for sublist in all_reasons for reason in sublist if reason != 'None']
+        return ', '.join(pd.Series(flat).value_counts().head(5).index)
+
     aggregated_summary = filtered_df.groupby('Grid Number on map').agg({
-       'area_ha': 'sum',
-       'Suitability Score': 'mean',
-       'Crop Name': lambda x: ', '.join(sorted(set(x))),
-       'Suitability Category': lambda x: ', '.join(sorted(set(x))),
-       'Failure Reasons': lambda x: ', '.join(sorted(set(x))),
-       'x': 'mean',
-       'y': 'mean'
+        'area_ha': 'sum',
+        'Suitability Score': 'mean',
+        'Crop Name': lambda x: ', '.join(sorted(set(x))),
+        'Suitability Category': lambda x: ', '.join(sorted(set(x))),
+        'x': 'mean',
+        'y': 'mean',
+        'Failure Reasons': get_top_5_failure_reasons
     }).reset_index()
 
-# Rename columns for clarity
     aggregated_summary.rename(columns={
         'area_ha': 'Total Fallow Land Area (ha)',
         'Suitability Score': 'Average Suitability Score',
         'Crop Name': 'Crops',
         'Suitability Category': 'Suitability Categories',
-        'Failure Reasons': 'Failure Reasons'
+        'Failure Reasons': 'Top 5 Failure Reasons'
     }, inplace=True)
 
-# Display the aggregated summary table instead of the detailed one
     st.subheader("Aggregated Summary Table by Grid Number on Map")
     st.dataframe(aggregated_summary)
-
 
     def convert_df(df):
         output = BytesIO()
@@ -284,7 +281,7 @@ if crop_file and climate_files:
 
     st.download_button(
         label="Download Results as Excel",
-        data=convert_df(aggregated_df),
+        data=convert_df(aggregated_summary),
         file_name="suitability_by_grid_results.xlsx",
         mime="application/vnd.openxmlformats-officedocument.spreadsheetml.sheet"
     )
