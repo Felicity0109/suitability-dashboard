@@ -214,7 +214,7 @@ if crop_file and climate_files:
         "Low": "red",
         "Unsuitable": "gray"
     }
-    fig_map = px.scatter_mapbox(
+    fig_map = px.scatter_map(
         filtered_df,
         lat="y",
         lon="x",
@@ -222,10 +222,10 @@ if crop_file and climate_files:
         color_discrete_map=color_map,
         hover_name="Crop Name",
         hover_data=["Suitability Score", "Failure Reasons", "area_ha", "source_file"],
-        mapbox_style="carto-positron",
-        zoom=5,
+        map_style="carto-positron",
+        zoom=10,
         height=500
-    )
+     )
     st.plotly_chart(fig_map, use_container_width=True)
 
     # Histogram
