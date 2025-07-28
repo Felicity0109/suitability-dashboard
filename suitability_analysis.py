@@ -225,8 +225,8 @@ if crop_file and climate_files:
         color_discrete_map=color_map,
         hover_name="Crop Name",
         hover_data=["Suitability Score", "Failure Reasons", "area_ha", "source_file"],
-        map_style="carto-positron",
-        zoom=10,
+        map_style="open-street-map",
+        zoom=7,
         height=500
      )
     st.plotly_chart(fig_map, use_container_width=True)
