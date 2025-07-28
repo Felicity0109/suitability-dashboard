@@ -208,7 +208,6 @@ if crop_file and climate_files:
            value=(min_area, max_area),
            step=1.0
        )
-       climate_df = climate_df[climate_df['area_ha'].between(*selected_area_range)]
     else:
        st.sidebar.warning("Fallow land area range is zero. Adjust your dataset or filters.")
 
