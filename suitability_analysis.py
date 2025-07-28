@@ -294,6 +294,48 @@ if crop_file and climate_files:
 else:
     st.info("Please upload both crop and climate datasets to begin.")
 
+
+px.defaults.mapbox_style = "open-street-map"  # Or use 'carto-positron'
+
+# --- Define thresholds ---
+area_thresholds = [20, 50, 100, 500]
+
+# --- Fallow land area threshold maps with downloads ---
+st.subheader("Maps by Fallow Land Area Threshold")
+
+for threshold in area_thresholds:
+    st.markdown(f"### Locations with Fallow Land ≥ {threshold} ha")
+    
+    area_filtered_df = suitability_df[suitability_df["area_ha"] >= threshold]
+
+    if not area_filtered_df.empty:
+        fig_thresh = px.scatter_mapbox(
+            area_filtered_df,
+            lat="y",
+            lon="x",
+            color="Suitability Category",
+            size="area_ha",
+            hover_name="Crop Name",
+            hover_data=["area_ha", "Suitability Score", "Failure Reasons"],
+            zoom=5,
+            height=500
+        )
+        st.plotly_chart(fig_thresh, use_container_width=True)
+
+        # CSV Download Button
+        csv_buffer = BytesIO()
+        area_filtered_df.to_csv(csv_buffer, index=False)
+        csv_buffer.seek(0)
+
+        st.download_button(
+            label=f"Download CSV for ≥ {threshold} ha",
+            data=csv_buffer,
+            file_name=f"suitability_{threshold}ha.csv",
+            mime="text/csv"
+        )
+    else:
+        st.info(f"No data points with fallow land area ≥ {threshold} ha.")
+
 # --- Footer ---
 st.markdown("---")
 st.markdown("© Developed by Sasol Research & Technology: Feedstock (2025)")
