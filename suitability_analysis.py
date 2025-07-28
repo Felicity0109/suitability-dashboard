@@ -4,7 +4,7 @@ import streamlit as st
 import plotly.express as px
 import seaborn as sns
 import matplotlib.pyplot as plt
-from io import BytesIO
+from io import BytesIO, StringIO
 
 st.set_page_config(page_title="Crop Suitability Assessment Tool (CSAT)", layout="wide")
 
@@ -22,7 +22,6 @@ def load_crop_data(file):
     return pd.read_excel(file)
 
 def load_climate_data(files):
-    # files is a list of uploaded files
     df_list = []
     for f in files:
         temp_df = pd.read_excel(f)
@@ -94,23 +93,17 @@ def categorize_score(score):
     else:
         return 'Unsuitable'
 
-    # Identify mismatched and matched parameters for each row
+# Identify mismatched and matched parameters for each row
 def get_failure_reason(row, crop):
     reasons = []
 
-    # Rainfall check
     if row["Rainfall Min"] < crop["Rainfall Min"] or row["Rainfall Max"] > crop["Rainfall Max"]:
         reasons.append("Rainfall")
-
-    # Temperature check
     if row["Temp Min"] < crop["Temp Min"] or row["Temp Max"] > crop["Temp Max"]:
         reasons.append("Temperature")
-
-    # Drought tolerance check
     if crop["Drought Tolerance"] != "Any" and row["Drought Tolerance"] != crop["Drought Tolerance"]:
         reasons.append("Drought Tolerance")
 
-    # Suitable Köppen Zones check: parse strings to int lists
     try:
         crop_zones = [int(z.strip()) for z in str(crop["Suitable Köppen Zones"]).split(",")]
     except ValueError:
@@ -123,19 +116,16 @@ def get_failure_reason(row, crop):
     if not set(crop_zones).intersection(set(row_zones)):
         reasons.append("Köppen Zone")
 
-    # Soil Texture check (assuming similar comma-separated string; adjust if needed)
     crop_soil = [s.strip() for s in str(crop["Soil Texture"]).split(",")]
     row_soil = [s.strip() for s in str(row["Soil Texture"]).split(",")]
     if not any(soil in row_soil for soil in crop_soil):
         reasons.append("Soil Texture")
 
-    # Drainage Preference check (assuming similar comma-separated string)
     crop_drainage = [d.strip() for d in str(crop["Drainage Preference"]).split(",")]
     row_drainage = [d.strip() for d in str(row["Drainage Preference"]).split(",")]
     if not any(drain in row_drainage for drain in crop_drainage):
         reasons.append("Drainage")
 
-    # Irrigation Need check
     if crop["Irrigation Need"] != "Any" and row["Irrigation Need"] != crop["Irrigation Need"]:
         reasons.append("Irrigation")
 
@@ -146,17 +136,16 @@ if crop_file and climate_files:
     with st.spinner("Processing data... Please wait."):
         crop_df = load_crop_data(crop_file)
         
-        # Load & combine climate files
-        combined_climate_df = pd.DataFrame()
         dfs = []
         for f in climate_files:
             temp_df = pd.read_excel(f)
-            temp_df['source_file'] = f.name  # track which file the data came from
+            temp_df['source_file'] = f.name
             dfs.append(temp_df)
         if dfs:
             combined_climate_df = pd.concat(dfs, ignore_index=True)
+        else:
+            combined_climate_df = pd.DataFrame()
 
-        # Rename & clean area column if present
         if "Fallow land area" in combined_climate_df.columns:
             combined_climate_df.rename(columns={"Fallow land area": "area_ha"}, inplace=True)
             combined_climate_df['area_ha'] = pd.to_numeric(combined_climate_df['area_ha'], errors='coerce').fillna(0)
@@ -175,7 +164,6 @@ if crop_file and climate_files:
 
     st.success("Data successfully processed.")
 
-    # Sidebar filters for category and failure reasons
     st.sidebar.subheader("Filters")
     categories = suitability_df['Suitability Category'].unique().tolist()
     selected_categories = st.sidebar.multiselect("Suitability Category", options=categories, default=categories)
@@ -196,7 +184,6 @@ if crop_file and climate_files:
         default=suitability_df['source_file'].unique()
     )
 
-    # Filter data based on selections
     filtered_df = suitability_df[
         (suitability_df['Suitability Category'].isin(selected_categories)) &
         (suitability_df['source_file'].isin(selected_provinces))
@@ -205,7 +192,6 @@ if crop_file and climate_files:
         pattern = '|'.join(selected_failures)
         filtered_df = filtered_df[filtered_df['Failure Reasons'].str.contains(pattern)]
 
-    # Crop selector
     selected_crops = st.multiselect("Select Crops to Compare", crop_df['Crop Name'].unique(), default=crop_df['Crop Name'].unique()[0])
     filtered_df = filtered_df[filtered_df['Crop Name'].isin(selected_crops)]
 
@@ -217,7 +203,7 @@ if crop_file and climate_files:
         "Low": "red",
         "Unsuitable": "gray"
     }
-    fig_map = px.scatter_map(
+    fig_map = px.scatter_mapbox(
         filtered_df,
         lat="y",
         lon="x",
@@ -225,8 +211,8 @@ if crop_file and climate_files:
         color_discrete_map=color_map,
         hover_name="Crop Name",
         hover_data=["Suitability Score", "Failure Reasons", "area_ha", "source_file"],
-        map_style="open-street-map",
-        zoom=7,
+        mapbox_style="open-street-map",
+        zoom=10,
         height=500
      )
     st.plotly_chart(fig_map, use_container_width=True)
@@ -241,13 +227,11 @@ if crop_file and climate_files:
 
     # Summary table
     st.subheader("Summary Table")
-    # Create summary DataFrame
     summary_rows = []
 
     for _, row in filtered_df.iterrows():
         crop_row = crop_df[crop_df["Crop Name"] == row["Crop Name"]].iloc[0]
         
-        # Get the original climate row from combined_climate_df using x, y, and source_file
         matching_climate_row = combined_climate_df[
             (combined_climate_df["x"] == row["x"]) &
             (combined_climate_df["y"] == row["y"]) &
@@ -291,48 +275,47 @@ if crop_file and climate_files:
         mime="application/vnd.openxmlformats-officedocument.spreadsheetml.sheet"
     )
 
+    # --- Area Threshold Maps ---
+    area_thresholds = [20, 50, 100, 500]
+
+    st.subheader("Maps by Fallow Land Area Threshold")
+
+    for threshold in area_thresholds:
+        st.markdown(f"### Locations with Fallow Land ≥ {threshold} ha")
+
+        area_filtered_df = suitability_df[suitability_df["area_ha"] >= threshold]
+
+        if not area_filtered_df.empty:
+            fig_thresh = px.scatter_mapbox(
+                area_filtered_df,
+                lat="y",
+                lon="x",
+                color="Suitability Category",
+                size="area_ha",
+                hover_name="Crop Name",
+                hover_data=["area_ha", "Suitability Score", "Failure Reasons"],
+                zoom=5,
+                height=500,
+                mapbox_style="open-street-map"
+            )
+            st.plotly_chart(fig_thresh, use_container_width=True)
+
+            # Prepare CSV for download
+            csv_buffer = StringIO()
+            area_filtered_df.to_csv(csv_buffer, index=False)
+            csv_buffer.seek(0)
+
+            st.download_button(
+                label=f"Download CSV for ≥ {threshold} ha",
+                data=csv_buffer.getvalue(),
+                file_name=f"suitability_{threshold}ha.csv",
+                mime="text/csv"
+            )
+        else:
+            st.info(f"No data points with fallow land area ≥ {threshold} ha.")
+
 else:
     st.info("Please upload both crop and climate datasets to begin.")
-
-
-# --- Define thresholds ---
-area_thresholds = [20, 50, 100, 500]
-
-# --- Fallow land area threshold maps with downloads ---
-st.subheader("Maps by Fallow Land Area Threshold")
-
-for threshold in area_thresholds:
-    st.markdown(f"### Locations with Fallow Land ≥ {threshold} ha")
-    
-    area_filtered_df = suitability_df[suitability_df["area_ha"] >= threshold]
-
-    if not area_filtered_df.empty:
-        fig_thresh = px.scatter_mapbox(
-            area_filtered_df,
-            lat="y",
-            lon="x",
-            color="Suitability Category",
-            size="area_ha",
-            hover_name="Crop Name",
-            hover_data=["area_ha", "Suitability Score", "Failure Reasons"],
-            zoom=5,
-            height=500
-        )
-        st.plotly_chart(fig_thresh, use_container_width=True)
-
-        # CSV Download Button
-        csv_buffer = BytesIO()
-        area_filtered_df.to_csv(csv_buffer, index=False)
-        csv_buffer.seek(0)
-
-        st.download_button(
-            label=f"Download CSV for ≥ {threshold} ha",
-            data=csv_buffer,
-            file_name=f"suitability_{threshold}ha.csv",
-            mime="text/csv"
-        )
-    else:
-        st.info(f"No data points with fallow land area ≥ {threshold} ha.")
 
 # --- Footer ---
 st.markdown("---")
