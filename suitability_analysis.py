@@ -226,19 +226,18 @@ if crop_file and climate_files:
     st.subheader("Suitability Map")
     color_map = {"High": "green", "Moderate": "orange", "Low": "red", "Unsuitable": "gray"}
     st.markdown(f"Showing areas between **{selected_area_range[0]} ha** and **{selected_area_range[1]} ha**")
-    fig_map = px.scatter_mapbox(
+    fig = px.scatter_mapbox(
         filtered_df,
         lat="y",
         lon="x",
-        color="Suitability Category",
-        color_discrete_map=color_map,
-        symbol="Shape",
-        hover_name="Crop Name",
-        hover_data=["Suitability Score", "Failure Reasons", "area_ha", "source_file", "Shape"],
-        mapbox_style="carto-positron",
+        color='Suitability Score',
+        hover_name='Crop Name',
+        hover_data=['area_ha', 'Rainfall Min', 'Rainfall Max', 'Temp Min', 'Temp Max'],
         zoom=5,
-        height=500
-    )
+        height=600,
+        mapbox_style="carto-positron"
+       )
+
     st.plotly_chart(fig_map, use_container_width=True)
 
     st.subheader("Suitability Score Distribution")
