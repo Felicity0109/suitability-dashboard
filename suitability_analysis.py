@@ -198,13 +198,19 @@ if crop_file and climate_files:
 
     min_area = float(suitability_df['area_ha'].min(skipna=True))
     max_area = float(suitability_df['area_ha'].max(skipna=True))
-    selected_area_range = st.sidebar.slider(
-        "Select Fallow Land Area Range (ha)",
-        min_value=min_area,
-        max_value=max_area,
-        value=(min_area, max_area),
-        step=1.0
-    )
+
+    
+    if min_area < max_area:
+       selected_area_range = st.sidebar.slider(
+           "Select Fallow Land Area Range (ha)",
+           min_value=min_area,
+           max_value=max_area,
+           value=(min_area, max_area),
+           step=1.0
+       )
+       climate_df = climate_df[climate_df['area_ha'].between(*selected_area_range)]
+    else:
+       st.sidebar.warning("Fallow land area range is zero. Adjust your dataset or filters.")
 
     filtered_df = suitability_df[
         (suitability_df['Suitability Category'].isin(selected_categories)) &
