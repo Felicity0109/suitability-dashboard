@@ -181,6 +181,9 @@ if crop_file and climate_files:
     selected_categories = st.sidebar.multiselect("Suitability Category", options=categories, default=categories)
 
     all_failures = set()
+    if 'Failure Reasons' not in suitability_df.columns:
+        suitability_df['Failure Reasons'] = 'None'
+        
     for fr in suitability_df['Failure Reasons']:
         if fr and fr != 'None':
             all_failures.update([f.strip() for f in fr.split(',')])
@@ -270,7 +273,7 @@ if crop_file and climate_files:
         })
 
     summary_df = pd.DataFrame(summary_rows)
-    st.dataframe(summary_df)
+    st.dataframe(summary_df.head(10))
 
     # --- Download Button ---
     st.subheader("Download Results")
