@@ -8,33 +8,25 @@ from io import BytesIO
 
 st.set_page_config(page_title="Crop Suitability Assessment Tool (CSAT)", layout="wide")
 
-# --- App Title ---
 st.title("Crop Suitability Assessment Tool (CSAT)")
 st.markdown("⚠️ Disclaimer: This tool provides an initial crop suitability estimate based on your data. Results are indicative. Ensure your data is accurate for best outcomes.")
 st.warning("Ensure your Land and Climate Data Excel files follow the required format and naming convention: '<Province abbreviation>_coordinates.xlsx'.")
 
-# --- Upload Inputs ---
+# Upload section
 st.sidebar.header("Upload Data")
 crop_file = st.sidebar.file_uploader("Upload Crop Data (.xlsx)", type=["xlsx"])
 climate_files = st.sidebar.file_uploader("Upload Land and Climate Data for Province (.xlsx)", type=["xlsx"], accept_multiple_files=True)
 
-# --- Load Data ---
 def load_crop_data(file):
     return pd.read_excel(file)
 
 def load_climate_data(files):
-    # files is a list of uploaded files
     df_list = []
     for f in files:
         temp_df = pd.read_excel(f)
         df_list.append(temp_df)
-    if df_list:
-        combined_df = pd.concat(df_list, ignore_index=True)
-        return combined_df
-    else:
-        return pd.DataFrame()
+    return pd.concat(df_list, ignore_index=True) if df_list else pd.DataFrame()
 
-# --- Suitability Calculation ---
 def check_failures(row, crop):
     failures = []
     if not (row['Rainfall Min'] >= crop['Rainfall Min']):
@@ -73,9 +65,7 @@ def calculate_suitability(climate_df, crop_df):
                 row['Drainage Preference'] == crop['Drainage Preference'],
                 row['Irrigation Need'] == crop['Irrigation Need']
             ])
-
             failures = check_failures(row, crop)
-
             results.append({
                 'Crop Name': crop_name,
                 'x': row['x'],
@@ -90,7 +80,7 @@ def categorize_score(score):
         return 'High'
     elif score >= 4:
         return 'Moderate'
-    elif score >= 0:
+    else:
         return 'Low'
 
 def get_area_shape(area):
@@ -105,56 +95,8 @@ def get_area_shape(area):
     else:
         return "arrow-bar-up"
 
-    # Identify mismatched and matched parameters for each row
-def get_failure_reason(row, crop):
-    reasons = []
-
-    # Rainfall check
-    if row["Rainfall Min"] < crop["Rainfall Min"] or row["Rainfall Max"] > crop["Rainfall Max"]:
-        reasons.append("Rainfall")
-
-    # Temperature check
-    if row["Temp Min"] < crop["Temp Min"] or row["Temp Max"] > crop["Temp Max"]:
-        reasons.append("Temperature")
-
-    # Drought tolerance check
-    if crop["Drought Tolerance"] != "Any" and row["Drought Tolerance"] != crop["Drought Tolerance"]:
-        reasons.append("Drought Tolerance")
-
-    # Suitable Köppen Zones check: parse strings to int lists
-    try:
-        crop_zones = [int(z.strip()) for z in str(crop["Suitable Köppen Zones"]).split(",")]
-    except ValueError:
-        crop_zones = []
-    try:
-        row_zones = [int(z.strip()) for z in str(row["Suitable Köppen Zones"]).split(",")]
-    except ValueError:
-        row_zones = []
-
-    if not set(crop_zones).intersection(set(row_zones)):
-        reasons.append("Köppen Zone")
-
-    # Soil Texture check (assuming similar comma-separated string; adjust if needed)
-    crop_soil = [s.strip() for s in str(crop["Soil Texture"]).split(",")]
-    row_soil = [s.strip() for s in str(row["Soil Texture"]).split(",")]
-    if not any(soil in row_soil for soil in crop_soil):
-        reasons.append("Soil Texture")
-
-    # Drainage Preference check (assuming similar comma-separated string)
-    crop_drainage = [d.strip() for d in str(crop["Drainage Preference"]).split(",")]
-    row_drainage = [d.strip() for d in str(row["Drainage Preference"]).split(",")]
-    if not any(drain in row_drainage for drain in crop_drainage):
-        reasons.append("Drainage")
-
-    # Irrigation Need check
-    if crop["Irrigation Need"] != "Any" and row["Irrigation Need"] != crop["Irrigation Need"]:
-        reasons.append("Irrigation")
-
-    return ", ".join(reasons) if reasons else "None"
-
-# --- Main Logic ---
 if crop_file and climate_files:
-    with st.spinner("Processing data... Please wait."):
+    with st.spinner("Processing data..."):
         crop_df = load_crop_data(crop_file)
 
         dfs = []
@@ -199,17 +141,17 @@ if crop_file and climate_files:
     min_area = float(suitability_df['area_ha'].min(skipna=True))
     max_area = float(suitability_df['area_ha'].max(skipna=True))
 
-    
     if min_area < max_area:
-       selected_area_range = st.sidebar.slider(
-           "Select Fallow Land Area Range (ha)",
-           min_value=min_area,
-           max_value=max_area,
-           value=(min_area, max_area),
-           step=1.0
-       )
+        selected_area_range = st.sidebar.slider(
+            "Select Fallow Land Area Range (ha)",
+            min_value=min_area,
+            max_value=max_area,
+            value=(min_area, max_area),
+            step=1.0
+        )
     else:
-       st.sidebar.warning("Fallow land area range is zero. Adjust your dataset or filters.")
+        st.sidebar.warning("Fallow land area range is zero. Adjust your dataset or filters.")
+        selected_area_range = (min_area, max_area)
 
     filtered_df = suitability_df[
         (suitability_df['Suitability Category'].isin(selected_categories)) &
@@ -217,6 +159,7 @@ if crop_file and climate_files:
         (suitability_df['area_ha'] >= selected_area_range[0]) &
         (suitability_df['area_ha'] <= selected_area_range[1])
     ]
+
     if selected_failures:
         pattern = '|'.join(selected_failures)
         filtered_df = filtered_df[filtered_df['Failure Reasons'].str.contains(pattern)]
@@ -234,7 +177,7 @@ if crop_file and climate_files:
         lon="x",
         color='Suitability Score',
         hover_name='Crop Name',
-        hover_data=['area_ha', 'Rainfall Min', 'Rainfall Max', 'Temp Min', 'Temp Max'],
+        hover_data=['area_ha'],
         zoom=5,
         height=600,
         mapbox_style="carto-positron"
@@ -254,7 +197,7 @@ if crop_file and climate_files:
 
     def get_top_5_failure_reasons(group):
         all_reasons = group['Failure Reasons'].dropna().str.split(', ')
-        flat = [reason for sublist in all_reasons for reason in sublist if reason != 'None']
+        flat = [r for sublist in all_reasons for r in sublist if r != 'None']
         return ', '.join(pd.Series(flat).value_counts().head(5).index)
 
     aggregated_summary = filtered_df.groupby('Grid Number on map').agg({
@@ -290,10 +233,9 @@ if crop_file and climate_files:
         file_name="suitability_by_grid_results.xlsx",
         mime="application/vnd.openxmlformats-officedocument.spreadsheetml.sheet"
     )
-
 else:
     st.info("Please upload both crop and climate datasets to begin.")
 
-# --- Footer ---
+# Footer
 st.markdown("---")
 st.markdown("© Developed by Sasol Research & Technology: Feedstock (2025)")
