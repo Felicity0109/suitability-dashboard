@@ -295,8 +295,6 @@ else:
     st.info("Please upload both crop and climate datasets to begin.")
 
 
-px.defaults.mapbox_style = "open-street-map"  # Or use 'carto-positron'
-
 # --- Define thresholds ---
 area_thresholds = [20, 50, 100, 500]
 
