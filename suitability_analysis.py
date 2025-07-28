@@ -10,7 +10,7 @@ st.set_page_config(page_title="Crop Suitability Assessment Tool (CSAT)", layout=
 
 # --- App Title ---
 st.title("Crop Suitability Assessment Tool (CSAT)")
-st.markdown("⚠️ Note: This tool provides an initial crop suitability estimate based on your data. Results are indicative. Ensure your data is accurate for best outcomes.")
+st.markdown("⚠️ Disclaimer: This tool provides an initial crop suitability estimate based on your data. Results are indicative. Ensure your data is accurate for best outcomes.")
 st.warning("Ensure your input Excel files follow the required format and naming convention: '<Province abbreviation>_coordinates.xlsx'.")
 
 # --- Upload Inputs ---
@@ -90,10 +90,20 @@ def categorize_score(score):
         return 'High'
     elif score >= 4:
         return 'Moderate'
-    elif score >= 1:
+    elif score >= 0:
         return 'Low'
+
+def get_area_shape(area):
+    if area < 20:
+        return "circle"
+    elif area < 50:
+        return "square"
+    elif area < 100:
+        return "triangle-up"
+    elif area < 500:
+        return "diamond"
     else:
-        return 'Unsuitable'
+        return "arrow-bar-up"
 
     # Identify mismatched and matched parameters for each row
 def get_failure_reason(row, crop):
@@ -146,18 +156,16 @@ def get_failure_reason(row, crop):
 if crop_file and climate_files:
     with st.spinner("Processing data... Please wait."):
         crop_df = load_crop_data(crop_file)
-        
-        # Load & combine climate files
+
         combined_climate_df = pd.DataFrame()
         dfs = []
         for f in climate_files:
             temp_df = pd.read_excel(f)
-            temp_df['source_file'] = f.name  # track which file the data came from
+            temp_df['source_file'] = f.name
             dfs.append(temp_df)
         if dfs:
             combined_climate_df = pd.concat(dfs, ignore_index=True)
 
-        # Rename & clean area column if present
         if "Fallow land area" in combined_climate_df.columns:
             combined_climate_df.rename(columns={"Fallow land area": "area_ha"}, inplace=True)
             combined_climate_df['area_ha'] = pd.to_numeric(combined_climate_df['area_ha'], errors='coerce').fillna(0)
@@ -165,18 +173,15 @@ if crop_file and climate_files:
             combined_climate_df['area_ha'] = 0
 
         suitability_df = calculate_suitability(combined_climate_df, crop_df)
-
         suitability_df = suitability_df.merge(
             combined_climate_df[['x', 'y', 'area_ha', 'source_file']],
             on=['x', 'y'],
             how='left'
         )
-
         suitability_df['Suitability Category'] = suitability_df['Suitability Score'].apply(categorize_score)
 
     st.success("Data successfully processed.")
 
-    # Sidebar filters for category and failure reasons
     st.sidebar.subheader("Filters")
     categories = suitability_df['Suitability Category'].unique().tolist()
     selected_categories = st.sidebar.multiselect("Suitability Category", options=categories, default=categories)
@@ -185,8 +190,7 @@ if crop_file and climate_files:
     for fr in suitability_df['Failure Reasons']:
         if fr and fr != 'None':
             all_failures.update([f.strip() for f in fr.split(',')])
-    all_failures = sorted(list(all_failures))
-    selected_failures = st.sidebar.multiselect("Filter by Failure Reasons", options=all_failures)
+    selected_failures = st.sidebar.multiselect("Filter by Failure Reasons", options=sorted(list(all_failures)))
 
     selected_provinces = st.sidebar.multiselect(
         "Select Provinces",
@@ -194,42 +198,49 @@ if crop_file and climate_files:
         default=suitability_df['source_file'].unique()
     )
 
-    # Filter data based on selections
+    min_area = float(suitability_df['area_ha'].min(skipna=True))
+    max_area = float(suitability_df['area_ha'].max(skipna=True))
+    selected_area_range = st.sidebar.slider(
+        "Select Fallow Land Area Range (ha)",
+        min_value=min_area,
+        max_value=max_area,
+        value=(min_area, max_area),
+        step=1.0
+    )
+
     filtered_df = suitability_df[
         (suitability_df['Suitability Category'].isin(selected_categories)) &
-        (suitability_df['source_file'].isin(selected_provinces))
+        (suitability_df['source_file'].isin(selected_provinces)) &
+        (suitability_df['area_ha'] >= selected_area_range[0]) &
+        (suitability_df['area_ha'] <= selected_area_range[1])
     ]
     if selected_failures:
         pattern = '|'.join(selected_failures)
         filtered_df = filtered_df[filtered_df['Failure Reasons'].str.contains(pattern)]
 
-    # Crop selector
     selected_crops = st.multiselect("Select Crops to Compare", crop_df['Crop Name'].unique(), default=crop_df['Crop Name'].unique()[0])
     filtered_df = filtered_df[filtered_df['Crop Name'].isin(selected_crops)]
 
-    # Suitability Map
+    filtered_df["Shape"] = filtered_df["area_ha"].apply(get_area_shape)
+
     st.subheader("Suitability Map")
-    color_map = {
-        "High": "green",
-        "Moderate": "orange",
-        "Low": "red",
-        "Unsuitable": "gray"
-    }
+    color_map = {"High": "green", "Moderate": "orange", "Low": "red", "Unsuitable": "gray"}
+    st.markdown(f"Showing areas between **{selected_area_range[0]} ha** and **{selected_area_range[1]} ha**")
     fig_map = px.scatter_mapbox(
         filtered_df,
         lat="y",
         lon="x",
         color="Suitability Category",
         color_discrete_map=color_map,
+        symbol="Shape",
         hover_name="Crop Name",
-        hover_data=["Suitability Score", "Failure Reasons", "area_ha", "source_file"],
+        hover_data=["Suitability Score", "Failure Reasons", "area_ha", "source_file", "Shape"],
         mapbox_style="carto-positron",
         zoom=5,
         height=500
     )
     st.plotly_chart(fig_map, use_container_width=True)
 
-    # Histogram
     st.subheader("Suitability Score Distribution")
     fig, ax = plt.subplots(figsize=(10, 5))
     sns.histplot(data=filtered_df, x="Suitability Score", hue="Crop Name", multiple="stack", bins=10, ax=ax)
@@ -237,21 +248,15 @@ if crop_file and climate_files:
     ax.set_ylabel("Frequency")
     st.pyplot(fig)
 
-    # Summary table
     st.subheader("Summary Table")
-    # Create summary DataFrame
     summary_rows = []
-
     for _, row in filtered_df.iterrows():
         crop_row = crop_df[crop_df["Crop Name"] == row["Crop Name"]].iloc[0]
-        
-        # Get the original climate row from combined_climate_df using x, y, and source_file
         matching_climate_row = combined_climate_df[
             (combined_climate_df["x"] == row["x"]) &
             (combined_climate_df["y"] == row["y"]) &
             (combined_climate_df["source_file"] == row["source_file"])
         ]
-        
         if not matching_climate_row.empty:
             climate_row = matching_climate_row.iloc[0]
             failure_reason = get_failure_reason(climate_row, crop_row)
@@ -273,9 +278,7 @@ if crop_file and climate_files:
     summary_df = pd.DataFrame(summary_rows)
     st.dataframe(summary_df)
 
-    # --- Download Button ---
     st.subheader("Download Results")
-
     def convert_df(df):
         output = BytesIO()
         with pd.ExcelWriter(output, engine='xlsxwriter') as writer:
