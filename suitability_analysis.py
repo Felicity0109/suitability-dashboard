@@ -11,12 +11,12 @@ st.set_page_config(page_title="Crop Suitability Assessment Tool (CSAT)", layout=
 # --- App Title ---
 st.title("Crop Suitability Assessment Tool (CSAT)")
 st.markdown("⚠️ Disclaimer: This tool provides an initial crop suitability estimate based on your data. Results are indicative. Ensure your data is accurate for best outcomes.")
-st.warning("Ensure your input Excel files follow the required format and naming convention: '<Province abbreviation>_coordinates.xlsx'.")
+st.warning("Ensure your Land and Climate Data Excel files follow the required format and naming convention: '<Province abbreviation>_coordinates.xlsx'.")
 
 # --- Upload Inputs ---
 st.sidebar.header("Upload Data")
 crop_file = st.sidebar.file_uploader("Upload Crop Data (.xlsx)", type=["xlsx"])
-climate_files = st.sidebar.file_uploader("Upload Climate Data for Province (.xlsx)", type=["xlsx"], accept_multiple_files=True)
+climate_files = st.sidebar.file_uploader("Upload Land and Climate Data for Province (.xlsx)", type=["xlsx"], accept_multiple_files=True)
 
 # --- Load Data ---
 def load_crop_data(file):
