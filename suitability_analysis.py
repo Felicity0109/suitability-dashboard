@@ -248,7 +248,7 @@ if crop_file and climate_files:
 
         summary_rows.append({
             "Crop Name": row["Crop Name"],
-            "Grid Number on map": f"{row['x']}_{row['y']}",
+            "Grid Number on map": row['Grid Number on map'],
             "Suitability Category": row["Suitability Category"],
             "Fallow Land Area (ha)": row["area_ha"],
             "Matched Parameters": matched_params,
