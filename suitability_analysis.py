@@ -275,47 +275,38 @@ if crop_file and climate_files:
         mime="application/vnd.openxmlformats-officedocument.spreadsheetml.sheet"
     )
 
-    # --- Area Threshold Maps ---
+    # --- Fallow Land Area Threshold Maps ---
+    st.subheader(f"Maps by Fallow Land Area Threshold for {selected_crop}")
     area_thresholds = [20, 50, 100, 500]
-
-    st.subheader("Maps by Fallow Land Area Threshold")
-
+    
     for threshold in area_thresholds:
-        st.markdown(f"### Locations with Fallow Land ≥ {threshold} ha")
+        st.markdown(f"**Fallow Land Area ≥ {threshold} Ha**")
+        threshold_df = filtered_df[filtered_df["Fallow land area"] >= threshold]
 
-        area_filtered_df = suitability_df[suitability_df["area_ha"] >= threshold]
-
-        if not area_filtered_df.empty:
+        if threshold_df.empty:
+            st.warning(f"No coordinates meet the threshold of {threshold} Ha.")
+        else:
             fig_thresh = px.scatter_mapbox(
-                area_filtered_df,
+                threshold_df,
                 lat="y",
                 lon="x",
                 color="Suitability Category",
-                size="area_ha",
-                hover_name="Crop Name",
-                hover_data=["area_ha", "Suitability Score", "Failure Reasons"],
+                color_discrete_map=suitability_colors,
+                hover_name="Grid Number on map",
                 zoom=5,
                 height=500,
-                mapbox_style="open-street-map"
             )
+            fig_thresh.update_layout(mapbox_style="carto-positron", margin={"r":0,"t":0,"l":0,"b":0})
             st.plotly_chart(fig_thresh, use_container_width=True)
 
-            # Prepare CSV for download
-            csv_buffer = StringIO()
-            area_filtered_df.to_csv(csv_buffer, index=False)
-            csv_buffer.seek(0)
-
+            # --- Download Button ---
+            csv_bytes = threshold_df.to_csv(index=False).encode('utf-8')
             st.download_button(
-                label=f"Download CSV for ≥ {threshold} ha",
-                data=csv_buffer.getvalue(),
-                file_name=f"suitability_{threshold}ha.csv",
+                label=f"Download CSV for Area ≥ {threshold} Ha",
+                data=csv_bytes,
+                file_name=f"{selected_crop}_fallow_{threshold}Ha.csv",
                 mime="text/csv"
             )
-        else:
-            st.info(f"No data points with fallow land area ≥ {threshold} ha.")
-
-else:
-    st.info("Please upload both crop and climate datasets to begin.")
 
 
 # --- Grid-Level Summary Button ---
