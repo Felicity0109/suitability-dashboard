@@ -317,14 +317,6 @@ if crop_file and climate_files:
 else:
     st.info("Please upload both crop and climate datasets to begin.")
 
-    st.download_button(
-        label="Download CSV for ≥ {threshold} ha",
-        data=csv_buffer.getvalue(),
-        file_name=f"suitability_{threshold}ha.csv",
-        mime="text/csv")
-
-else:
-    st.info(f"No data points with fallow land area ≥ {threshold} ha.")
 
 # --- Grid-Level Summary Button ---
 st.subheader("Grid-Level Suitability Summary")
@@ -361,8 +353,6 @@ if st.button("Generate Grid-Level Summary"):
             file_name="grid_level_suitability_summary.csv",
             mime='text/csv'
         )
-
-
 
 
 # --- Footer ---
