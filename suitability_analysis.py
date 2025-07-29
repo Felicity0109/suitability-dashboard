@@ -32,6 +32,20 @@ def load_climate_data(files):
     else:
         return pd.DataFrame()
 
+def is_multi_match(crop_val, land_val):
+    # Handle None or NaN as no match
+    if pd.isna(crop_val) or pd.isna(land_val):
+        return False
+    try:
+        crop_set = set(str(crop_val).split(","))
+        land_set = set(str(land_val).split(","))
+        # Strip spaces and compare sets
+        crop_set = set(x.strip() for x in crop_set)
+        land_set = set(x.strip() for x in land_set)
+        return len(crop_set.intersection(land_set)) > 0
+    except Exception:
+        return False
+
 # --- Suitability Calculation ---
 def check_failures(row, crop):
     failures = []
@@ -43,34 +57,34 @@ def check_failures(row, crop):
         failures.append('Temp Min')
     if not (row['Temp Max'] <= crop['Temp Max']):
         failures.append('Temp Max')
-    if row['Drought Tolerance'] != crop['Drought Tolerance']:
+    if str(row['Drought Tolerance']).strip() != str(crop['Drought Tolerance']).strip():
         failures.append('Drought Tolerance')
-    if row['Suitable Köppen Zones'] != crop['Suitable Köppen Zones']:
+    if not is_multi_match(crop['Suitable Köppen Zones'], row['Suitable Köppen Zones']):
         failures.append('Suitable Köppen Zones')
-    if row['Soil Texture'] != crop['Soil Texture']:
+    if not is_multi_match(crop['Soil Texture'], row['Soil Texture']):
         failures.append('Soil Texture')
-    if row['Drainage Preference'] != crop['Drainage Preference']:
+    if not is_multi_match(crop['Drainage Preference'], row['Drainage Preference']):
         failures.append('Drainage Preference')
-    if row['Irrigation Need'] != crop['Irrigation Need']:
+    if str(row['Irrigation Need']).strip().lower() != str(crop['Irrigation Need']).strip().lower():
         failures.append('Irrigation Need')
     return ', '.join(failures) if failures else 'None'
+
 
 def calculate_suitability(climate_df, crop_df):
     results = []
     for _, crop in crop_df.iterrows():
         crop_name = crop['Crop Name']
         for _, row in climate_df.iterrows():
-            score = sum([
-                row['Rainfall Min'] >= crop['Rainfall Min'],
-                row['Rainfall Max'] <= crop['Rainfall Max'],
-                row['Temp Min'] >= crop['Temp Min'],
-                row['Temp Max'] <= crop['Temp Max'],
-                row['Drought Tolerance'] == crop['Drought Tolerance'],
-                row['Suitable Köppen Zones'] == crop['Suitable Köppen Zones'],
-                row['Soil Texture'] == crop['Soil Texture'],
-                row['Drainage Preference'] == crop['Drainage Preference'],
-                row['Irrigation Need'] == crop['Irrigation Need']
-            ])
+            score = 0
+            score += int(row['Rainfall Min'] >= crop['Rainfall Min'])
+            score += int(row['Rainfall Max'] <= crop['Rainfall Max'])
+            score += int(row['Temp Min'] >= crop['Temp Min'])
+            score += int(row['Temp Max'] <= crop['Temp Max'])
+            score += int(str(row['Drought Tolerance']).strip() == str(crop['Drought Tolerance']).strip())
+            score += int(is_multi_match(crop['Suitable Köppen Zones'], row['Suitable Köppen Zones']))
+            score += int(is_multi_match(crop['Soil Texture'], row['Soil Texture']))
+            score += int(is_multi_match(crop['Drainage Preference'], row['Drainage Preference']))
+            score += int(str(row['Irrigation Need']).strip().lower() == str(crop['Irrigation Need']).strip().lower())
 
             failures = check_failures(row, crop)
 
@@ -82,6 +96,7 @@ def calculate_suitability(climate_df, crop_df):
                 'Failure Reasons': failures
             })
     return pd.DataFrame(results)
+
 
 def categorize_score(score):
     if score >= 7:
@@ -135,7 +150,7 @@ def get_failure_reason(row, crop):
 if crop_file and climate_files:
     with st.spinner("Processing data... Please wait."):
         crop_df = load_crop_data(crop_file)
-        
+
         dfs = []
         for f in climate_files:
             temp_df = pd.read_excel(f)
@@ -171,7 +186,7 @@ if crop_file and climate_files:
     all_failures = set()
     if 'Failure Reasons' not in suitability_df.columns:
         suitability_df['Failure Reasons'] = 'None'
-        
+
     for fr in suitability_df['Failure Reasons']:
         if fr and fr != 'None':
             all_failures.update([f.strip() for f in fr.split(',')])
@@ -212,7 +227,7 @@ if crop_file and climate_files:
         hover_name="Crop Name",
         hover_data=["Suitability Score", "Failure Reasons", "area_ha", "source_file"],
         mapbox_style="open-street-map",
-        zoom=10,
+        zoom=7,
         height=500
      )
     st.plotly_chart(fig_map, use_container_width=True)
