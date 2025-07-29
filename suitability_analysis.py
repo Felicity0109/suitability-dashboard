@@ -290,13 +290,25 @@ if crop_file and climate_files:
         mime="application/vnd.openxmlformats-officedocument.spreadsheetml.sheet"
     )
 
+    suitability_colors = {
+    "High": "green",
+    "Moderate": "orange",
+    "Low": "red",
+    "Unsuitable": "gray"
+     }
     # --- Fallow Land Area Threshold Maps ---
+    if selected_crops:
+       selected_crop = selected_crops[0]
+    else:
+       selected_crop = "Selected Crop"  # fallback
+
     st.subheader(f"Maps by Fallow Land Area Threshold for {selected_crop}")
     area_thresholds = [20, 50, 100, 500]
     
     for threshold in area_thresholds:
         st.markdown(f"**Fallow Land Area ≥ {threshold} Ha**")
-        threshold_df = filtered_df[filtered_df["Fallow land area"] >= threshold]
+        combined_climate_df.rename(columns={"Fallow land area": "area_ha"}, inplace=True)
+
 
         if threshold_df.empty:
             st.warning(f"No coordinates meet the threshold of {threshold} Ha.")
