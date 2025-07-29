@@ -302,6 +302,8 @@ if crop_file and climate_files:
        selected_crop = "Selected Crop"  # fallback
 
     # --- Fallow Land Area Threshold Maps ---
+selected_crop = st.selectbox("Select a crop to visualize:", sorted(filtered_df["Crop Name"].unique()))
+
 st.subheader(f"Maps by Fallow Land Area Threshold for {selected_crop}")
 area_thresholds = [20, 50, 100, 500]
 
