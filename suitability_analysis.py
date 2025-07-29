@@ -282,16 +282,10 @@ if crop_file and climate_files:
     # --- Download Button ---
     st.subheader("Download Results")
 
-    def convert_df(df):
-        output = BytesIO()
-        with pd.ExcelWriter(output, engine='xlsxwriter') as writer:
-            df.to_excel(writer, index=False, sheet_name='Suitability Results')
-        return output.getvalue()
-
     st.download_button(
-        label="Download Filtered Results as Excel",
-        data=convert_df(summary_df),
-        file_name="suitability_results.xlsx",
+        label="Download Full Suitability Data",
+        data=convert_df(suitability_df),
+        file_name="crop_suitability_results.xlsx",
         mime="application/vnd.openxmlformats-officedocument.spreadsheetml.sheet"
     )
 
