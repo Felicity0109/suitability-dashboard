@@ -88,12 +88,33 @@ def calculate_suitability(climate_df, crop_df):
 
             failures = check_failures(row, crop)
 
+            def calculate_suitability(climate_df, crop_df):
+    results = []
+    for _, crop in crop_df.iterrows():
+        crop_name = crop['Crop Name']
+        for _, row in climate_df.iterrows():
+            score = sum([
+                row['Rainfall Min'] >= crop['Rainfall Min'],
+                row['Rainfall Max'] <= crop['Rainfall Max'],
+                row['Temp Min'] >= crop['Temp Min'],
+                row['Temp Max'] <= crop['Temp Max'],
+                str(row['Drought Tolerance']).strip() == str(crop['Drought Tolerance']).strip(),
+                is_multi_match(crop['Suitable Köppen Zones'], row['Suitable Köppen Zones']),
+                is_multi_match(crop['Soil Texture'], row['Soil Texture']),
+                is_multi_match(crop['Drainage Preference'], row['Drainage Preference']),
+                str(row['Irrigation Need']).strip().lower() == str(crop['Irrigation Need']).strip().lower()
+            ])
+
             results.append({
                 'Crop Name': crop_name,
                 'x': row['x'],
                 'y': row['y'],
+                'Rainfall Min': row['Rainfall Min'],
+                'Rainfall Max': row['Rainfall Max'],
+                'Temp Min': row['Temp Min'],
+                'Temp Max': row['Temp Max'],
                 'Suitability Score': score,
-                'Failure Reasons': failures
+                'Failure Reasons': check_failures(row, crop)
             })
     return pd.DataFrame(results)
 
@@ -240,40 +261,41 @@ if crop_file and climate_files:
     ax.set_ylabel("Frequency")
     st.pyplot(fig)
 
-    # Summary table
-    st.subheader("Summary Table")
-    summary_rows = []
+    st.subheader("Interactive Analysis")
 
-    for _, row in filtered_df.iterrows():
-        crop_row = crop_df[crop_df["Crop Name"] == row["Crop Name"]].iloc[0]
+    selected_crop = st.selectbox("Select Crop", suitability_df['Crop Name'].unique())
+    filtered_df = suitability_df[suitability_df['Crop Name'] == selected_crop]
+
+    # Pie Chart: Suitability Category Breakdown
+    st.plotly_chart(
+        px.pie(filtered_df, names='Suitability Category', title=f"Suitability Categories for {selected_crop}"),
+        use_container_width=True
+    )
+
+    # Bar Chart: Top Performing Crops by Area
+    top_area_df = suitability_df[suitability_df['Suitability Category'] == 'High']
+    bar_df = top_area_df.groupby('Crop Name')['area_ha'].sum().reset_index().sort_values(by='area_ha', ascending=False).head(10)
+    st.plotly_chart(
+        px.bar(bar_df, x='Crop Name', y='area_ha', title='Top Crops by High Suitability Area (ha)'),
+        use_container_width=True
+    )
+
+    # Pie Chart: Failure Reason Breakdown
+    failure_series = suitability_df['Failure Reasons'].str.split(', ').explode()
+    failure_counts = failure_series.value_counts().reset_index()
+    failure_counts.columns = ['Failure Reason', 'Count']
+    st.plotly_chart(
+        px.pie(failure_counts, names='Failure Reason', values='Count', title='Failure Reasons Breakdown'),
+        use_container_width=True
+    )
+
+    # Download Button
+    def convert_df(df):
+        output = BytesIO()
+        with pd.ExcelWriter(output, engine='xlsxwriter') as writer:
+            df.to_excel(writer, index=False, sheet_name='Suitability')
+        return output.getvalue()
         
-        matching_climate_row = combined_climate_df[
-            (combined_climate_df["x"] == row["x"]) &
-            (combined_climate_df["y"] == row["y"]) &
-            (combined_climate_df["source_file"] == row["source_file"])
-        ]
-        
-        if not matching_climate_row.empty:
-            climate_row = matching_climate_row.iloc[0]
-            failure_reason = get_failure_reason(climate_row, crop_row)
-            matched_params = 9 - failure_reason.count(",") if failure_reason != "None" else 9
-        else:
-            failure_reason = "Unavailable"
-            matched_params = "N/A"
-
-        summary_rows.append({
-            "Crop Name": row["Crop Name"],
-            "Grid Number on map": f"{row['x']}_{row['y']}",
-            "Suitability Category": row["Suitability Category"],
-            "Fallow Land Area (ha)": row["area_ha"],
-            "Matched Parameters": matched_params,
-            "Failed Parameters": failure_reason,
-            "Failure Reason": failure_reason
-        })
-
-    summary_df = pd.DataFrame(summary_rows)
-    st.dataframe(summary_df.head(10))
-
     # --- Download Button ---
     st.subheader("Download Results")
 
