@@ -70,25 +70,8 @@ def check_failures(row, crop):
     return ', '.join(failures) if failures else 'None'
 
 
+
 def calculate_suitability(climate_df, crop_df):
-    results = []
-    for _, crop in crop_df.iterrows():
-        crop_name = crop['Crop Name']
-        for _, row in climate_df.iterrows():
-            score = 0
-            score += int(row['Rainfall Min'] >= crop['Rainfall Min'])
-            score += int(row['Rainfall Max'] <= crop['Rainfall Max'])
-            score += int(row['Temp Min'] >= crop['Temp Min'])
-            score += int(row['Temp Max'] <= crop['Temp Max'])
-            score += int(str(row['Drought Tolerance']).strip() == str(crop['Drought Tolerance']).strip())
-            score += int(is_multi_match(crop['Suitable Köppen Zones'], row['Suitable Köppen Zones']))
-            score += int(is_multi_match(crop['Soil Texture'], row['Soil Texture']))
-            score += int(is_multi_match(crop['Drainage Preference'], row['Drainage Preference']))
-            score += int(str(row['Irrigation Need']).strip().lower() == str(crop['Irrigation Need']).strip().lower())
-
-            failures = check_failures(row, crop)
-
-            def calculate_suitability(climate_df, crop_df):
     results = []
     for _, crop in crop_df.iterrows():
         crop_name = crop['Crop Name']
