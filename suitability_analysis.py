@@ -317,6 +317,54 @@ if crop_file and climate_files:
 else:
     st.info("Please upload both crop and climate datasets to begin.")
 
+    st.download_button(
+        label="Download CSV for ≥ {threshold} ha",
+        data=csv_buffer.getvalue(),
+        file_name=f"suitability_{threshold}ha.csv",
+        mime="text/csv")
+
+else:
+    st.info(f"No data points with fallow land area ≥ {threshold} ha.")
+
+# --- Grid-Level Summary Button ---
+st.subheader("Grid-Level Suitability Summary")
+if st.button("Generate Grid-Level Summary"):
+    with st.spinner("Processing grid-level summary..."):
+        # Ensure categorization exists at point level
+        suitability_df['Suitability Category'] = suitability_df['Suitability Score'].apply(categorize_score)
+
+        # Create a grid identifier if not present
+        suitability_df['Grid Number on map'] = suitability_df['x'].astype(str) + '_' + suitability_df['y'].astype(str)
+
+        # Group by Grid Number and Crop Name
+        grid_summary = suitability_df.groupby(['Grid Number on map', 'Crop Name']).agg({
+            'Suitability Score': 'mean',
+            'x': 'count'
+        }).reset_index()
+
+        grid_summary.rename(columns={
+            'x': 'Number of Points',
+            'Suitability Score': 'Average Score'
+        }, inplace=True)
+
+        # Categorize grid-level average scores
+        grid_summary['Grid Suitability Category'] = grid_summary['Average Score'].apply(categorize_score)
+
+        # Show top 10
+        st.dataframe(grid_summary.head(10))
+
+        # Download option
+        grid_csv = grid_summary.to_csv(index=False).encode('utf-8')
+        st.download_button(
+            label="Download Grid-Level Summary as CSV",
+            data=grid_csv,
+            file_name="grid_level_suitability_summary.csv",
+            mime='text/csv'
+        )
+
+
+
+
 # --- Footer ---
 st.markdown("---")
 st.markdown("© Developed by Sasol Research & Technology: Feedstock (2025)")
