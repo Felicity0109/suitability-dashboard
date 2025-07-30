@@ -222,7 +222,7 @@ if crop_file and climate_files:
         "Low": "red",
         "Unsuitable": "gray"
     }
-    fig_map = px.scatter_mapbox(
+    fig_map = px.scatter_map(
         filtered_df,
         lat="y",
         lon="x",
@@ -230,7 +230,7 @@ if crop_file and climate_files:
         color_discrete_map=color_map,
         hover_name="Crop Name",
         hover_data=["Suitability Score", "Failure Reasons", "area_ha", "source_file"],
-        mapbox_style="open-street-map",
+        maplibre_style="open-street-map",
         zoom=7,
         height=500
      )
