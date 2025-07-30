@@ -295,54 +295,7 @@ if crop_file and climate_files:
     "Low": "red",
     "Unsuitable": "gray"
      }
-    # --- Fallow Land Area Threshold Maps ---
-    if selected_crops:
-       selected_crop = selected_crops[0]
-    else:
-       selected_crop = "Selected Crop"  # fallback
-
-    # --- Fallow Land Area Threshold Maps ---
-selected_crop = st.selectbox("Select a crop to visualize:", sorted(filtered_df["Crop Name"].unique()))
-
-st.subheader(f"Maps by Fallow Land Area Threshold for {selected_crop}")
-area_thresholds = [20, 50, 100, 500]
-
-for threshold in area_thresholds:
-    st.markdown(f"**Fallow Land Area ≥ {threshold} Ha**")
-    threshold_df = filtered_df[filtered_df["Fallow land area"] >= threshold]
-
-    if threshold_df.empty:
-        st.warning(f"No coordinates meet the threshold of {threshold} Ha.")
-        continue  # Prevents errors by skipping the rest of the loop if empty
-
-    # --- Map Plot ---
-    fig_thresh = px.scatter_mapbox(
-        threshold_df,
-        lat="y",
-        lon="x",
-        color="Suitability Category",
-        color_discrete_map=suitability_colors,
-        hover_name="Grid Number on map",
-        zoom=5,
-        height=500,
-    )
-    fig_thresh.update_layout(
-        mapbox_style="carto-positron",
-        margin={"r":0, "t":0, "l":0, "b":0}
-    )
-    st.plotly_chart(fig_thresh, use_container_width=True)
-
-    # --- Download Button ---
-    csv_bytes = threshold_df.to_csv(index=False).encode("utf-8")
-    st.download_button(
-        label=f"Download CSV for Area ≥ {threshold} Ha",
-        data=csv_bytes,
-        file_name=f"{selected_crop}_fallow_{threshold}Ha.csv",
-        mime="text/csv"
-    )
-
-
-
+    
 # --- Grid-Level Summary Button ---
 st.subheader("Grid-Level Suitability Summary")
 if 'suitability_df' in locals():
