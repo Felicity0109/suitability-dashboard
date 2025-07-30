@@ -151,6 +151,7 @@ def get_failure_reason(row, crop):
     return ", ".join(reasons) if reasons else "None"
 
 # --- Main Logic ---
+# --- Main Logic ---
 if crop_file and climate_files:
     with st.spinner("Processing data... Please wait."):
         crop_df = load_crop_data(crop_file)
@@ -160,10 +161,7 @@ if crop_file and climate_files:
             temp_df = pd.read_excel(f)
             temp_df['source_file'] = f.name
             dfs.append(temp_df)
-        if dfs:
-            combined_climate_df = pd.concat(dfs, ignore_index=True)
-        else:
-            combined_climate_df = pd.DataFrame()
+        combined_climate_df = pd.concat(dfs, ignore_index=True) if dfs else pd.DataFrame()
 
         if "Fallow land area" in combined_climate_df.columns:
             combined_climate_df.rename(columns={"Fallow land area": "area_ha"}, inplace=True)
@@ -200,101 +198,96 @@ if crop_file and climate_files:
     selected_provinces = st.sidebar.multiselect(
         "Select Provinces",
         options=suitability_df['source_file'].unique(),
-        default=suitability_df['source_file'].unique()
+        default=[]
     )
 
-    filtered_df = suitability_df[
-        (suitability_df['Suitability Category'].isin(selected_categories)) &
-        (suitability_df['source_file'].isin(selected_provinces))
-    ]
-    if selected_failures:
-        pattern = '|'.join(selected_failures)
-        filtered_df = filtered_df[filtered_df['Failure Reasons'].str.contains(pattern)]
+    selected_crops = st.multiselect("Select Crops to Compare", crop_df['Crop Name'].unique(), default=[])
 
-    selected_crops = st.multiselect("Select Crops to Compare", crop_df['Crop Name'].unique(), default=crop_df['Crop Name'].unique()[0])
-    filtered_df = filtered_df[filtered_df['Crop Name'].isin(selected_crops)]
+    # --- Conditional Rendering ---
+    if selected_provinces and selected_crops:
+        filtered_df = suitability_df[
+            (suitability_df['Suitability Category'].isin(selected_categories)) &
+            (suitability_df['source_file'].isin(selected_provinces)) &
+            (suitability_df['Crop Name'].isin(selected_crops))
+        ]
+        if selected_failures:
+            pattern = '|'.join(selected_failures)
+            filtered_df = filtered_df[filtered_df['Failure Reasons'].str.contains(pattern)]
 
-    # Suitability Map
-    st.subheader("Suitability Map")
-    color_map = {
-        "High": "green",
-        "Moderate": "orange",
-        "Low": "red",
-        "Unsuitable": "gray"
-    }
-    fig_map = px.scatter_map(
-        filtered_df,
-        lat="y",
-        lon="x",
-        color="Suitability Category",
-        color_discrete_map=color_map,
-        hover_name="Crop Name",
-        hover_data=["Suitability Score", "Failure Reasons", "area_ha", "source_file"],
-        maplibre_style="open-street-map",
-        zoom=7,
-        height=500
-     )
-    st.plotly_chart(fig_map, use_container_width=True)
+        # Suitability Map
+        st.subheader("Suitability Map")
+        color_map = {
+            "High": "green",
+            "Moderate": "orange",
+            "Low": "red",
+            "Unsuitable": "gray"
+        }
+        fig_map = px.scatter_map(
+            filtered_df,
+            lat="y",
+            lon="x",
+            color="Suitability Category",
+            color_discrete_map=color_map,
+            hover_name="Crop Name",
+            hover_data=["Suitability Score", "Failure Reasons", "area_ha", "source_file"],
+            maplibre_style="open-street-map",
+            zoom=7,
+            height=500
+        )
+        st.plotly_chart(fig_map, use_container_width=True)
 
-    # Histogram
-    st.subheader("Suitability Score Distribution")
-    fig, ax = plt.subplots(figsize=(10, 5))
-    sns.histplot(data=filtered_df, x="Suitability Score", hue="Crop Name", multiple="stack", bins=10, ax=ax)
-    ax.set_xlabel("Suitability Score")
-    ax.set_ylabel("Frequency")
-    st.pyplot(fig)
+        # Histogram
+        st.subheader("Suitability Score Distribution")
+        fig, ax = plt.subplots(figsize=(10, 5))
+        sns.histplot(data=filtered_df, x="Suitability Score", hue="Crop Name", multiple="stack", bins=10, ax=ax)
+        ax.set_xlabel("Suitability Score")
+        ax.set_ylabel("Frequency")
+        st.pyplot(fig)
 
-    st.subheader("Interactive Analysis")
+        st.subheader("Interactive Analysis")
+        selected_crop = st.selectbox("Select Crop", suitability_df['Crop Name'].unique())
+        filtered_crop_df = suitability_df[suitability_df['Crop Name'] == selected_crop]
 
-    selected_crop = st.selectbox("Select Crop", suitability_df['Crop Name'].unique())
-    filtered_df = suitability_df[suitability_df['Crop Name'] == selected_crop]
+        # Pie Chart: Suitability Category Breakdown
+        st.plotly_chart(
+            px.pie(filtered_crop_df, names='Suitability Category', title=f"Suitability Categories for {selected_crop}"),
+            use_container_width=True
+        )
 
-    # Pie Chart: Suitability Category Breakdown
-    st.plotly_chart(
-        px.pie(filtered_df, names='Suitability Category', title=f"Suitability Categories for {selected_crop}"),
-        use_container_width=True
-    )
+        # Bar Chart: Top Performing Crops by Area
+        top_area_df = suitability_df[suitability_df['Suitability Category'] == 'High']
+        bar_df = top_area_df.groupby('Crop Name')['area_ha'].sum().reset_index().sort_values(by='area_ha', ascending=False).head(10)
+        st.plotly_chart(
+            px.bar(bar_df, x='Crop Name', y='area_ha', title='Top Crops by High Suitability Area (ha)'),
+            use_container_width=True
+        )
 
-    # Bar Chart: Top Performing Crops by Area
-    top_area_df = suitability_df[suitability_df['Suitability Category'] == 'High']
-    bar_df = top_area_df.groupby('Crop Name')['area_ha'].sum().reset_index().sort_values(by='area_ha', ascending=False).head(10)
-    st.plotly_chart(
-        px.bar(bar_df, x='Crop Name', y='area_ha', title='Top Crops by High Suitability Area (ha)'),
-        use_container_width=True
-    )
+        # Pie Chart: Failure Reason Breakdown
+        failure_series = suitability_df['Failure Reasons'].str.split(', ').explode()
+        failure_counts = failure_series.value_counts().reset_index()
+        failure_counts.columns = ['Failure Reason', 'Count']
+        st.plotly_chart(
+            px.pie(failure_counts, names='Failure Reason', values='Count', title='Failure Reasons Breakdown'),
+            use_container_width=True
+        )
 
-    # Pie Chart: Failure Reason Breakdown
-    failure_series = suitability_df['Failure Reasons'].str.split(', ').explode()
-    failure_counts = failure_series.value_counts().reset_index()
-    failure_counts.columns = ['Failure Reason', 'Count']
-    st.plotly_chart(
-        px.pie(failure_counts, names='Failure Reason', values='Count', title='Failure Reasons Breakdown'),
-        use_container_width=True
-    )
+        # Download Button
+        def convert_df(df):
+            output = BytesIO()
+            with pd.ExcelWriter(output, engine='xlsxwriter') as writer:
+                df.to_excel(writer, index=False, sheet_name='Suitability')
+            return output.getvalue()
 
-    # Download Button
-    def convert_df(df):
-        output = BytesIO()
-        with pd.ExcelWriter(output, engine='xlsxwriter') as writer:
-            df.to_excel(writer, index=False, sheet_name='Suitability')
-        return output.getvalue()
-        
-    # --- Download Button ---
-    st.subheader("Download Results")
+        st.subheader("Download Results")
+        st.download_button(
+            label="Download Full Suitability Data",
+            data=convert_df(suitability_df),
+            file_name="crop_suitability_results.xlsx",
+            mime="application/vnd.openxmlformats-officedocument.spreadsheetml.sheet"
+        )
+    else:
+        st.warning("Please select at least one crop and one province to view the results.")
 
-    st.download_button(
-        label="Download Full Suitability Data",
-        data=convert_df(suitability_df),
-        file_name="crop_suitability_results.xlsx",
-        mime="application/vnd.openxmlformats-officedocument.spreadsheetml.sheet"
-    )
-
-    suitability_colors = {
-    "High": "green",
-    "Moderate": "orange",
-    "Low": "red",
-    "Unsuitable": "gray"
-     }
     
 # --- Grid-Level Summary Button ---
 st.subheader("Grid-Level Suitability Summary")
