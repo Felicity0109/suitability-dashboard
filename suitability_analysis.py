@@ -151,7 +151,6 @@ def get_failure_reason(row, crop):
     return ", ".join(reasons) if reasons else "None"
 
 # --- Main Logic ---
-# --- Main Logic ---
 if crop_file and climate_files:
     with st.spinner("Processing data... Please wait."):
         crop_df = load_crop_data(crop_file)
@@ -272,6 +271,36 @@ if crop_file and climate_files:
             use_container_width=True
         )
 
+        # Additional Visuals per Crop
+        st.subheader("Crop-wise Grid-Level Visualizations")
+        grid_data = suitability_df.copy()
+        grid_data['Grid ID'] = grid_data['x'].astype(str) + '_' + grid_data['y'].astype(str)
+        mean_scores_df = grid_data.groupby(['Grid ID', 'Crop Name']).agg({
+            'Suitability Score': 'mean',
+            'Failure Reasons': lambda x: ', '.join(x.dropna().unique())
+        }).reset_index()
+
+        for crop in selected_crops:
+            st.markdown(f"### {crop}")
+            crop_grid_data = mean_scores_df[mean_scores_df['Crop Name'] == crop]
+
+            # Histogram of Mean Suitability Scores
+            fig_hist, ax_hist = plt.subplots(figsize=(8, 4))
+            sns.histplot(crop_grid_data['Suitability Score'], bins=10, kde=True, ax=ax_hist)
+            ax_hist.set_title(f"Distribution of Mean Suitability Scores - {crop}")
+            ax_hist.set_xlabel("Mean Suitability Score")
+            ax_hist.set_ylabel("Frequency")
+            st.pyplot(fig_hist)
+
+            # Pie Chart of Failure Reasons
+            failure_series = crop_grid_data['Failure Reasons'].str.split(', ').explode()
+            failure_counts = failure_series.value_counts().reset_index()
+            failure_counts.columns = ['Failure Reason', 'Count']
+            st.plotly_chart(
+                px.pie(failure_counts, names='Failure Reason', values='Count', title=f"Failure Reasons for {crop}"),
+                use_container_width=True
+            )
+
         # Download Button
         def convert_df(df):
             output = BytesIO()
@@ -288,47 +317,6 @@ if crop_file and climate_files:
         )
     else:
         st.warning("Please select at least one crop and one province to view the results.")
-
-    
-# --- Grid-Level Summary Button ---
-st.subheader("Grid-Level Suitability Summary")
-if 'suitability_df' in locals():
-    if st.button("Generate Grid-Level Summary"):
-        with st.spinner("Processing grid-level summary..."):
-            # Ensure categorization exists at point level
-            suitability_df['Suitability Category'] = suitability_df['Suitability Score'].apply(categorize_score)
-
-            # Create a grid identifier if not present
-            suitability_df['Grid Number on map'] = suitability_df['x'].astype(str) + '_' + suitability_df['y'].astype(str)
-
-            # Group by Grid Number and Crop Name
-            grid_summary = suitability_df.groupby(['Grid Number on map', 'Crop Name']).agg({
-                'Suitability Score': 'mean',
-                'x': 'count'
-            }).reset_index()
-
-            grid_summary.rename(columns={
-                'x': 'Number of Points',
-                'Suitability Score': 'Average Score'
-            }, inplace=True)
-
-            # Categorize grid-level average scores
-            grid_summary['Grid Suitability Category'] = grid_summary['Average Score'].apply(categorize_score)
-
-            # Show top 10
-            st.dataframe(grid_summary.head(10))
-
-            # Download option
-            grid_csv = grid_summary.to_csv(index=False).encode('utf-8')
-            st.download_button(
-                label="Download Grid-Level Summary as CSV",
-                data=grid_csv,
-                file_name="grid_level_suitability_summary.csv",
-                mime='text/csv'
-            )
-else:
-    st.info("Please upload and process data first to enable grid-level summary.")
-
 
 # --- Footer ---
 st.markdown("---")
