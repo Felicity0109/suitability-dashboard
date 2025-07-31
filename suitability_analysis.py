@@ -237,13 +237,6 @@ if crop_file and climate_files:
         st.plotly_chart(fig_map, use_container_width=True)
 
         # Histogram
-        st.subheader("Suitability Score Distribution")
-        fig, ax = plt.subplots(figsize=(10, 5))
-        sns.histplot(data=filtered_df, x="Suitability Score", hue="Crop Name", multiple="stack", bins=10, ax=ax)
-        ax.set_xlabel("Suitability Score")
-        ax.set_ylabel("Frequency")
-        st.pyplot(fig)
-
         st.subheader("Interactive Analysis")
         selected_crop = st.selectbox("Select Crop", suitability_df['Crop Name'].unique())
         filtered_crop_df = suitability_df[suitability_df['Crop Name'] == selected_crop]
@@ -283,14 +276,6 @@ if crop_file and climate_files:
         for crop in selected_crops:
             st.markdown(f"### {crop}")
             crop_grid_data = mean_scores_df[mean_scores_df['Crop Name'] == crop]
-
-            # Histogram of Mean Suitability Scores
-            fig_hist, ax_hist = plt.subplots(figsize=(8, 4))
-            sns.histplot(crop_grid_data['Suitability Score'], bins=10, kde=True, ax=ax_hist)
-            ax_hist.set_title(f"Distribution of Mean Suitability Scores - {crop}")
-            ax_hist.set_xlabel("Mean Suitability Score")
-            ax_hist.set_ylabel("Frequency")
-            st.pyplot(fig_hist)
 
             # Pie Chart of Failure Reasons
             failure_series = crop_grid_data['Failure Reasons'].str.split(', ').explode()
