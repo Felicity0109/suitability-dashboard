@@ -18,6 +18,7 @@ crop_file = st.sidebar.file_uploader("Upload Crop Data (.xlsx)", type=["xlsx"])
 climate_files = st.sidebar.file_uploader("Upload Land and Climate Data for Province (.xlsx)", type=["xlsx"], accept_multiple_files=True)
 
 # --- Load Data ---
+@st.cache_data
 def load_crop_data(file):
     return pd.read_excel(file)
 
@@ -70,7 +71,7 @@ def check_failures(row, crop):
     return ', '.join(failures) if failures else 'None'
 
 
-
+@st.cache_data
 def calculate_suitability(climate_df, crop_df):
     results = []
     for _, crop in crop_df.iterrows():
@@ -302,6 +303,7 @@ if crop_file and climate_files:
         )
     else:
         st.warning("Please select at least one crop and one province to view the results.")
+        st.stop()
 
 # --- Footer ---
 st.markdown("---")
