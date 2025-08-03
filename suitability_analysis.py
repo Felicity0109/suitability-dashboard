@@ -252,7 +252,7 @@ if crop_file and climate_files:
         top_area_df = suitability_df[suitability_df['Suitability Category'] == 'High']
         bar_df = top_area_df.groupby('Crop Name')['area_ha'].sum().reset_index().sort_values(by='area_ha', ascending=False).head(10)
         st.plotly_chart(
-            px.bar(bar_df, x='Crop Name', y='area_ha', title= "Top 10 Crops with the Largest Area Rated as 'Highly Suitable'"),
+            px.bar(bar_df, x='Crop Name', y='area_ha', title= "Top 5 Crops with the Largest Area Classified as Highly Suitable"),
             use_container_width=True
         )
 
@@ -308,4 +308,5 @@ if crop_file and climate_files:
 # --- Footer ---
 st.markdown("---")
 st.markdown("© Developed by Sasol Research & Technology: Feedstock (2025)")
+
 
