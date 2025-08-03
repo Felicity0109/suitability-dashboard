@@ -256,14 +256,19 @@ if crop_file and climate_files:
             use_container_width=True
         )
 
-        # Pie Chart: Failure Reason Breakdown
+        # Pie Chart: Common Reasons for Unsuitability
         failure_series = suitability_df['Failure Reasons'].str.split(', ').explode()
         failure_counts = failure_series.value_counts().reset_index()
         failure_counts.columns = ['Common Reasons for Crop Unsuitability Across All Areas', 'Count']
+
         st.plotly_chart(
-            px.pie(failure_counts, names='Failure Reason', values='Count', title='Failure Reasons Breakdown'),
-            use_container_width=True
-        )
+            px.pie(
+        failure_counts,
+        names='Common Reasons for Crop Unsuitability Across All Areas',  # must match new column name
+        values='Count',
+        title='Reasons Why Land Was Deemed Unsuitable for Crops'),
+        use_container_width=True)
+
 
         # Additional Visuals per Crop
         st.subheader("Crop-wise Grid-Level Visualizations")
@@ -308,5 +313,6 @@ if crop_file and climate_files:
 # --- Footer ---
 st.markdown("---")
 st.markdown("© Developed by Sasol Research & Technology: Feedstock (2025)")
+
 
 
