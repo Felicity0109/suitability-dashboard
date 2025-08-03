@@ -269,43 +269,6 @@ if crop_file and climate_files:
         title='Reasons Why Land Was Deemed Unsuitable for Crops'),
         use_container_width=True)
 
-
-        # Additional Visuals per Crop
-        st.subheader("Crop-wise Grid-Level Visualizations")
-        grid_data = suitability_df.copy()
-        grid_data['Grid ID'] = grid_data['x'].astype(str) + '_' + grid_data['y'].astype(str)
-        mean_scores_df = grid_data.groupby(['Grid ID', 'Crop Name']).agg({
-            'Suitability Score': 'mean',
-            'Failure Reasons': lambda x: ', '.join(x.dropna().unique())
-        }).reset_index()
-
-        for crop in selected_crops:
-            st.markdown(f"### {crop}")
-            crop_grid_data = mean_scores_df[mean_scores_df['Crop Name'] == crop]
-
-            # Pie Chart of Failure Reasons
-            failure_series = crop_grid_data['Failure Reasons'].str.split(', ').explode()
-            failure_counts = failure_series.value_counts().reset_index()
-            failure_counts.columns = ['Failure Reason', 'Count']
-            st.plotly_chart(
-                px.pie(failure_counts, names='Failure Reason', values='Count', title=f"Failure Reasons for {crop}"),
-                use_container_width=True
-            )
-
-        # Download Button
-        def convert_df(df):
-            output = BytesIO()
-            with pd.ExcelWriter(output, engine='xlsxwriter') as writer:
-                df.to_excel(writer, index=False, sheet_name='Suitability')
-            return output.getvalue()
-
-        st.subheader("Download Results")
-        st.download_button(
-            label="Download Full Suitability Data",
-            data=convert_df(suitability_df),
-            file_name="crop_suitability_results.xlsx",
-            mime="application/vnd.openxmlformats-officedocument.spreadsheetml.sheet"
-        )
     else:
         st.warning("Please select at least one crop and one province to view the results.")
         st.stop()
@@ -313,6 +276,7 @@ if crop_file and climate_files:
 # --- Footer ---
 st.markdown("---")
 st.markdown("© Developed by Sasol Research & Technology: Feedstock (2025)")
+
 
 
 
