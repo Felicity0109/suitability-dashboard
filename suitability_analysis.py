@@ -33,30 +33,31 @@ def load_climate_data(files):
     else:
         return pd.DataFrame()
 
+# --- Helper function ---
 def is_multi_match(crop_val, land_val):
-    # Handle None or NaN as no match
+    """
+    Returns True if any value in crop_val exists in land_val.
+    Handles comma-separated strings, ignores spaces and order.
+    """
     if pd.isna(crop_val) or pd.isna(land_val):
         return False
     try:
-        crop_set = set(str(crop_val).split(","))
-        land_set = set(str(land_val).split(","))
-        # Strip spaces and compare sets
-        crop_set = set(x.strip() for x in crop_set)
-        land_set = set(x.strip() for x in land_set)
-        return len(crop_set.intersection(land_set)) > 0
+        crop_set = set(str(crop_val).replace(" ", "").split(","))
+        land_set = set(str(land_val).replace(" ", "").split(","))
+        return bool(crop_set & land_set)  # True if any overlap
     except Exception:
         return False
 
 # --- Suitability Calculation ---
 def check_failures(row, crop):
     failures = []
-    if not (row['Rainfall Min'] >= crop['Rainfall Min']):
+    if row['Rainfall Min'] < crop['Rainfall Min']:
         failures.append('Rainfall Min')
-    if not (row['Rainfall Max'] <= crop['Rainfall Max']):
+    if row['Rainfall Max'] > crop['Rainfall Max']:
         failures.append('Rainfall Max')
-    if not (row['Temp Min'] >= crop['Temp Min']):
+    if row['Temp Min'] < crop['Temp Min']:
         failures.append('Temp Min')
-    if not (row['Temp Max'] <= crop['Temp Max']):
+    if row['Temp Max'] > crop['Temp Max']:
         failures.append('Temp Max')
     if str(row['Drought Tolerance']).strip() != str(crop['Drought Tolerance']).strip():
         failures.append('Drought Tolerance')
@@ -69,7 +70,6 @@ def check_failures(row, crop):
     if str(row['Irrigation Need']).strip().lower() != str(crop['Irrigation Need']).strip().lower():
         failures.append('Irrigation Need')
     return ', '.join(failures) if failures else 'None'
-
 
 @st.cache_data
 def calculate_suitability(climate_df, crop_df):
@@ -91,8 +91,8 @@ def calculate_suitability(climate_df, crop_df):
 
             results.append({
                 'Crop Name': crop_name,
-                'x': row['x'],
-                'y': row['y'],
+                'x': row.get('x', None),
+                'y': row.get('y', None),
                 'Rainfall Min': row['Rainfall Min'],
                 'Rainfall Max': row['Rainfall Max'],
                 'Temp Min': row['Temp Min'],
@@ -101,7 +101,6 @@ def calculate_suitability(climate_df, crop_df):
                 'Failure Reasons': check_failures(row, crop)
             })
     return pd.DataFrame(results)
-
 
 def categorize_score(score):
     if score >= 7:
@@ -112,44 +111,6 @@ def categorize_score(score):
         return 'Low'
     else:
         return 'Unsuitable'
-
-# Identify mismatched and matched parameters for each row
-def get_failure_reason(row, crop):
-    reasons = []
-
-    if row["Rainfall Min"] < crop["Rainfall Min"] or row["Rainfall Max"] > crop["Rainfall Max"]:
-        reasons.append("Rainfall")
-    if row["Temp Min"] < crop["Temp Min"] or row["Temp Max"] > crop["Temp Max"]:
-        reasons.append("Temperature")
-    if crop["Drought Tolerance"] != "Any" and row["Drought Tolerance"] != crop["Drought Tolerance"]:
-        reasons.append("Drought Tolerance")
-
-    try:
-        crop_zones = [int(z.strip()) for z in str(crop["Suitable Köppen Zones"]).split(",")]
-    except ValueError:
-        crop_zones = []
-    try:
-        row_zones = [int(z.strip()) for z in str(row["Suitable Köppen Zones"]).split(",")]
-    except ValueError:
-        row_zones = []
-
-    if not set(crop_zones).intersection(set(row_zones)):
-        reasons.append("Köppen Zone")
-
-    crop_soil = [s.strip() for s in str(crop["Soil Texture"]).split(",")]
-    row_soil = [s.strip() for s in str(row["Soil Texture"]).split(",")]
-    if not any(soil in row_soil for soil in crop_soil):
-        reasons.append("Soil Texture")
-
-    crop_drainage = [d.strip() for d in str(crop["Drainage Preference"]).split(",")]
-    row_drainage = [d.strip() for d in str(row["Drainage Preference"]).split(",")]
-    if not any(drain in row_drainage for drain in crop_drainage):
-        reasons.append("Drainage")
-
-    if crop["Irrigation Need"] != "Any" and row["Irrigation Need"] != crop["Irrigation Need"]:
-        reasons.append("Irrigation")
-
-    return ", ".join(reasons) if reasons else "None"
 
 # --- Main Logic ---
 if crop_file and climate_files:
@@ -276,6 +237,7 @@ if crop_file and climate_files:
 # --- Footer ---
 st.markdown("---")
 st.markdown("© Developed by Sasol Research & Technology: Feedstock (2025)")
+
 
 
 
