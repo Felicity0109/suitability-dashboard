@@ -245,6 +245,37 @@ if crop_file and climate_files:
             )
 
         st.plotly_chart(fig_map, use_container_width=True)
+
+        plot_df = filtered_df.copy()
+        plot_df['Plot Score'] = plot_df['Suitability Score']
+        plot_df.loc[plot_df['Suitability Category'] == 'Unsuitable', 'Plot Score'] = -1
+
+
+        color_scale = [
+           [0.0, "lightgrey"],  # -1 mapped to 0 fraction for grey
+           [0.0001, "red"],     # start of actual suitability
+           [0.5, "orange"],     # medium
+           [1.0, "green"]       # high
+        ]
+
+# Normalize scores for color scale (0–9 normal range)
+       fig_map = px.scatter_mapbox(
+       plot_df,
+       lat="y",
+       lon="x",
+       color="Plot Score",
+       color_continuous_scale=color_scale,
+       range_color=[-1, 9],  # include -1 for grey
+       hover_name="Crop Name",
+       hover_data=["Suitability Score", "Suitability Category", "Failure Reasons", "area_ha", "source_file"],
+       mapbox_style="open-street-map",
+       zoom=7,
+       height=500
+     )
+
+st.plotly_chart(fig_map, use_container_width=True)
+
+        
         st.subheader("Interactive Analysis")
 
         # Pie Chart: Suitability Category Breakdown
@@ -268,6 +299,7 @@ if crop_file and climate_files:
 # --- Footer ---
 st.markdown("---")
 st.markdown("© Developed by Sasol Research & Technology: Feedstock (2025)")
+
 
 
 
