@@ -174,7 +174,7 @@ if crop_file and climate_files:
          #   filtered_df = filtered_df[filtered_df['Failure Reasons'].str.contains(pattern)]
         
                 # --- Provincial Breakdown Table ---
-        st.subheader("Provincial Breakdown Summary")
+        st.subheader("Provincial Summary")
 
         def compute_provincial_summary(df):
             # Extract province name from source_file (remove extension)
@@ -297,6 +297,7 @@ if crop_file and climate_files:
 # --- Footer ---
 st.markdown("---")
 st.markdown("© Developed by Sasol Research & Technology: Feedstock (2025)")
+
 
 
 
