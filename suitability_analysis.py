@@ -169,7 +169,6 @@ if crop_file and climate_files:
         st.stop()  
 
     # --- Conditional Rendering ---
-    if selected_provinces and selected_crops:
         filtered_df = suitability_df[
         (suitability_df['source_file'].isin(selected_provinces)) & 
         (suitability_df['Crop Name'].isin(selected_crops))]
@@ -253,7 +252,7 @@ if crop_file and climate_files:
 
         # Pie Chart: Suitability Category Breakdown
         st.plotly_chart(
-            px.pie(filtered_crop_df, names='Suitability Category', title=f"Suitability Categories for {selected_crop}"),
+            px.pie(filtered_df, names='Suitability Category', title=f"Suitability Categories for {selected_crop}"),
             use_container_width=True
         )
 
@@ -272,6 +271,7 @@ if crop_file and climate_files:
 # --- Footer ---
 st.markdown("---")
 st.markdown("© Developed by Sasol Research & Technology: Feedstock (2025)")
+
 
 
 
