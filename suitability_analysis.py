@@ -164,11 +164,8 @@ if crop_file and climate_files:
 
     selected_crops = st.multiselect("Select Crops to Compare", crop_df['Crop Name'].unique(), default=[])
 
-    if not selected_provinces or not selected_crops:
-        st.warning("Please select at least one crop and one province to view the results.")
-        st.stop()  
-
     # --- Conditional Rendering ---
+    if selected_provinces and selected_crops:
         filtered_df = suitability_df[
         (suitability_df['source_file'].isin(selected_provinces)) & 
         (suitability_df['Crop Name'].isin(selected_crops))]
@@ -271,6 +268,7 @@ if crop_file and climate_files:
 # --- Footer ---
 st.markdown("---")
 st.markdown("© Developed by Sasol Research & Technology: Feedstock (2025)")
+
 
 
 
