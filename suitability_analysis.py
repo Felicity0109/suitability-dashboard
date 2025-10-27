@@ -203,7 +203,7 @@ if crop_file and climate_files:
                 })
     
             return pd.DataFrame(summary)
-
+        numeric_cols = ['Average Suitability Score', 'High (%)', 'Moderate (%)', 'Low (%)', 'Average Power Density (W/m³)']
         provincial_summary_df = compute_provincial_summary(filtered_df, crop_df)
         st.dataframe(
             provincial_summary_df.style.format({
@@ -212,7 +212,7 @@ if crop_file and climate_files:
                     'Moderate (%)': "{:.1f}",
                     'Low (%)': "{:.1f}",
                     'Average Power Density (W/m³)': "{:.2f}"
-            }),
+            }, na_rep= "N/A"),
             use_container_width=True
             )
  
@@ -271,6 +271,7 @@ if crop_file and climate_files:
 # --- Footer ---
 st.markdown("---")
 st.markdown("© Developed by Sasol Research & Technology: Feedstock (2025)")
+
 
 
 
