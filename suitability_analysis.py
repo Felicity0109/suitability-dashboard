@@ -272,10 +272,8 @@ if crop_file and climate_files:
          zoom=7,
          height=500
      )
+        st.plotly_chart(fig_map, use_container_width=True)
 
-st.plotly_chart(fig_map, use_container_width=True)
-
-        
         st.subheader("Interactive Analysis")
 
         # Pie Chart: Suitability Category Breakdown
@@ -299,6 +297,7 @@ st.plotly_chart(fig_map, use_container_width=True)
 # --- Footer ---
 st.markdown("---")
 st.markdown("© Developed by Sasol Research & Technology: Feedstock (2025)")
+
 
 
 
