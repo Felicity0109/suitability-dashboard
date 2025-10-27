@@ -187,8 +187,8 @@ if crop_file and climate_files:
                 main_limiting = failure_series.value_counts().idxmax() if not failure_series.empty else 'None'
     
                 # Get bioenergy info
-                bio_category = group['Bioenergy category'].iloc[0] if 'bioenergy category' in group.columns else 'N/A'
-                avg_power = group['average power density'].iloc[0] if 'average power density' in group.columns else 'N/A'
+                bio_category = group['Bioenergy category'].iloc[0] if 'Bioenergy category' in group.columns else 'N/A'
+                avg_power = group['Average Power Density'].iloc[0] if 'Average Power Density' in group.columns else 'N/A'
     
                 summary.append({
                     'Province': province,
@@ -275,6 +275,7 @@ if crop_file and climate_files:
 # --- Footer ---
 st.markdown("---")
 st.markdown("© Developed by Sasol Research & Technology: Feedstock (2025)")
+
 
 
 
