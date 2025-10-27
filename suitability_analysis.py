@@ -221,7 +221,7 @@ if crop_file and climate_files:
         
             return pd.DataFrame(summary)
 
-
+        provincial_summary_df = compute_provincial_summary(filtered_df)
         st.dataframe(
             provincial_summary_df.style.format({
                 'Average Suitability Score': "{:.2f}",
@@ -286,6 +286,7 @@ if crop_file and climate_files:
 # --- Footer ---
 st.markdown("---")
 st.markdown("© Developed by Sasol Research & Technology: Feedstock (2025)")
+
 
 
 
