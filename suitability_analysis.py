@@ -187,7 +187,7 @@ if crop_file and climate_files:
                 main_limiting = failure_series.value_counts().idxmax() if not failure_series.empty else 'None'
     
                 # Get bioenergy info
-                bio_category = group['bioenergy category'].iloc[0] if 'bioenergy category' in group.columns else 'N/A'
+                bio_category = group['Bioenergy category'].iloc[0] if 'bioenergy category' in group.columns else 'N/A'
                 avg_power = group['average power density'].iloc[0] if 'average power density' in group.columns else 'N/A'
     
                 summary.append({
@@ -198,13 +198,17 @@ if crop_file and climate_files:
                     'Moderate (%)': round(moderate_pct, 1),
                     'Low (%)': round(low_pct, 1),
                     'Main Limiting Factor': main_limiting,
-                    'Bioenergy Category': bio_category,
+                    'Bioenergy category': bio_category,
                     'Average Power Density (W/m³)': avg_power
                 })
     
             return pd.DataFrame(summary)
         numeric_cols = ['Average Suitability Score', 'High (%)', 'Moderate (%)', 'Low (%)', 'Average Power Density (W/m³)']
         provincial_summary_df = compute_provincial_summary(filtered_df, crop_df)
+        for col in numeric_cols:
+            if col in provincial_summary_df.columns:
+                provincial_summary_df[col] = pd.to_numeric(provincial_summary_df[col], errors='coerce')
+
         st.dataframe(
             provincial_summary_df.style.format({
                     'Average Suitability Score': "{:.2f}",
@@ -271,6 +275,7 @@ if crop_file and climate_files:
 # --- Footer ---
 st.markdown("---")
 st.markdown("© Developed by Sasol Research & Technology: Feedstock (2025)")
+
 
 
 
