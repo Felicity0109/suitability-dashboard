@@ -259,18 +259,18 @@ if crop_file and climate_files:
         ]
 
 # Normalize scores for color scale (0–9 normal range)
-       fig_map = px.scatter_mapbox(
-       plot_df,
-       lat="y",
-       lon="x",
-       color="Plot Score",
-       color_continuous_scale=color_scale,
-       range_color=[-1, 9],  # include -1 for grey
-       hover_name="Crop Name",
-       hover_data=["Suitability Score", "Suitability Category", "Failure Reasons", "area_ha", "source_file"],
-       mapbox_style="open-street-map",
-       zoom=7,
-       height=500
+        fig_map = px.scatter_mapbox(
+         plot_df,
+         lat="y",
+         lon="x",
+         color="Plot Score",
+         color_continuous_scale=color_scale,
+         range_color=[-1, 9],  # include -1 for grey
+         hover_name="Crop Name",
+         hover_data=["Suitability Score", "Suitability Category", "Failure Reasons", "area_ha", "source_file"],
+         mapbox_style="open-street-map",
+         zoom=7,
+         height=500
      )
 
 st.plotly_chart(fig_map, use_container_width=True)
@@ -299,6 +299,7 @@ st.plotly_chart(fig_map, use_container_width=True)
 # --- Footer ---
 st.markdown("---")
 st.markdown("© Developed by Sasol Research & Technology: Feedstock (2025)")
+
 
 
 
