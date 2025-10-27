@@ -250,7 +250,6 @@ if crop_file and climate_files:
      )
         st.plotly_chart(fig_map, use_container_width=True)
 
-        st.subheader("Interactive Analysis")
         # Let the user pick one crop for detailed analysis
         selected_crop = st.selectbox("Select Crop for Detailed Analysis", filtered_df['Crop Name'].unique())
 
@@ -277,6 +276,7 @@ if crop_file and climate_files:
 # --- Footer ---
 st.markdown("---")
 st.markdown("© Developed by Sasol Research & Technology: Feedstock (2025)")
+
 
 
 
