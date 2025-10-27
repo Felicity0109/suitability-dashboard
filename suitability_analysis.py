@@ -235,7 +235,8 @@ if crop_file and climate_files:
            lat="y",
            lon="x",
            color="Suitability Score",
-           color_discrete_map=color_map,
+           color_continuous_scale="Viridis"
+           #color_discrete_map=color_map,
            hover_name="Crop Name",
            hover_data=["Suitability Score", "Failure Reasons", "area_ha", "source_file"],
            mapbox_style="open-street-map",
@@ -267,6 +268,7 @@ if crop_file and climate_files:
 # --- Footer ---
 st.markdown("---")
 st.markdown("© Developed by Sasol Research & Technology: Feedstock (2025)")
+
 
 
 
