@@ -174,6 +174,57 @@ if crop_file and climate_files:
         if selected_failures:
             pattern = '|'.join(selected_failures)
             filtered_df = filtered_df[filtered_df['Failure Reasons'].str.contains(pattern)]
+                # --- Provincial Breakdown Table ---
+        st.subheader("Provincial Breakdown Summary")
+
+        def compute_provincial_summary(df):
+            # Extract province name from source_file (remove extension)
+            df['Province'] = df['source_file'].str.replace('.xlsx', '', regex=False)
+
+            summary = []
+            for province, group in df.groupby('Province'):
+                avg_score = group['Suitability Score'].mean()
+
+                total = len(group)
+                high = (group['Suitability Category'] == 'High').sum()
+                moderate = (group['Suitability Category'] == 'Moderate').sum()
+                low = (group['Suitability Category'] == 'Low').sum()
+
+                # Calculate proportions
+                high_pct = (high / total) * 100 if total > 0 else 0
+                moderate_pct = (moderate / total) * 100 if total > 0 else 0
+                low_pct = (low / total) * 100 if total > 0 else 0
+
+                # Determine the most common limiting factor (excluding 'None')
+                failure_series = group['Failure Reasons'].str.split(',').explode().str.strip()
+                failure_series = failure_series[failure_series != 'None']
+                main_limiting = failure_series.value_counts().idxmax() if not failure_series.empty else 'None'
+
+                summary.append({
+                    'Province': province,
+                    'Average Suitability Score': round(avg_score, 2),
+                    'High (%)': round(high_pct, 1),
+                    'Moderate (%)': round(moderate_pct, 1),
+                    'Low (%)': round(low_pct, 1),
+                    'Main Limiting Factor': main_limiting
+                })
+
+            return pd.DataFrame(summary)
+
+        provincial_summary_df = compute_provincial_summary(filtered_df)
+
+        st.dataframe(
+            provincial_summary_df.style.format({
+                'Average Suitability Score': "{:.2f}",
+                'High (%)': "{:.1f}",
+                'Moderate (%)': "{:.1f}",
+                'Low (%)': "{:.1f}"
+            }),
+            use_container_width=True
+        )
+
+        st.markdown("This table provides province-specific statistics showing how suitability varies spatially.")
+
 
         # Suitability Map
         st.subheader("Suitability Map")
@@ -237,6 +288,7 @@ if crop_file and climate_files:
 # --- Footer ---
 st.markdown("---")
 st.markdown("© Developed by Sasol Research & Technology: Feedstock (2025)")
+
 
 
 
