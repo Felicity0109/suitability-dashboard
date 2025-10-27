@@ -165,7 +165,7 @@ if crop_file and climate_files:
             df['Province'] = df['source_file'].str.replace('.xlsx', '', regex=False)
             
             # Merge bioenergy info from crop_df
-            crop_info = crop_df[['Crop Name', 'bioenergy category', 'average power density']]
+            crop_info = crop_df[['Crop Name', 'Bioenergy category', 'Average Power Density']]
             df = df.merge(crop_info, on='Crop Name', how='left')
     
             summary = []
@@ -271,6 +271,7 @@ if crop_file and climate_files:
 # --- Footer ---
 st.markdown("---")
 st.markdown("© Developed by Sasol Research & Technology: Feedstock (2025)")
+
 
 
 
