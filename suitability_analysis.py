@@ -142,19 +142,19 @@ if crop_file and climate_files:
 
     st.success("Data successfully processed.")
 
-    st.sidebar.subheader("Filters")
-    categories = suitability_df['Suitability Category'].unique().tolist()
-    selected_categories = st.sidebar.multiselect("Suitability Category", options=categories, default=categories)
+    #st.sidebar.subheader("Filters")
+    #categories = suitability_df['Suitability Category'].unique().tolist()
+    #selected_categories = st.sidebar.multiselect("Suitability Category", options=categories, default=categories)
 
     all_failures = set()
-    if 'Failure Reasons' not in suitability_df.columns:
-        suitability_df['Failure Reasons'] = 'None'
+    #if 'Failure Reasons' not in suitability_df.columns:
+    #    suitability_df['Failure Reasons'] = 'None'
 
-    for fr in suitability_df['Failure Reasons']:
-        if fr and fr != 'None':
-            all_failures.update([f.strip() for f in fr.split(',')])
-    all_failures = sorted(list(all_failures))
-    selected_failures = st.sidebar.multiselect("Filter by Failure Reasons", options=all_failures)
+    #for fr in suitability_df['Failure Reasons']:
+    #    if fr and fr != 'None':
+    #        all_failures.update([f.strip() for f in fr.split(',')])
+    #all_failures = sorted(list(all_failures))
+    #selected_failures = st.sidebar.multiselect("Filter by Failure Reasons", options=all_failures)
 
     selected_provinces = st.sidebar.multiselect(
         "Select Provinces",
@@ -171,9 +171,10 @@ if crop_file and climate_files:
             (suitability_df['source_file'].isin(selected_provinces)) &
             (suitability_df['Crop Name'].isin(selected_crops))
         ]
-        if selected_failures:
-            pattern = '|'.join(selected_failures)
-            filtered_df = filtered_df[filtered_df['Failure Reasons'].str.contains(pattern)]
+        #if selected_failures:
+         #   pattern = '|'.join(selected_failures)
+         #   filtered_df = filtered_df[filtered_df['Failure Reasons'].str.contains(pattern)]
+        
                 # --- Provincial Breakdown Table ---
         st.subheader("Provincial Breakdown Summary")
 
@@ -288,6 +289,7 @@ if crop_file and climate_files:
 # --- Footer ---
 st.markdown("---")
 st.markdown("© Developed by Sasol Research & Technology: Feedstock (2025)")
+
 
 
 
