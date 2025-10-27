@@ -222,9 +222,6 @@ if crop_file and climate_files:
             use_container_width=True
         )
 
-        st.markdown("This table provides province-specific statistics showing how suitability varies spatially.")
-
-
         # Suitability Map
         st.subheader("Suitability Map")
         color_map = {
@@ -237,7 +234,7 @@ if crop_file and climate_files:
            filtered_df,
            lat="y",
            lon="x",
-           color="Suitability Category",
+           color="Suitability Score",
            color_discrete_map=color_map,
            hover_name="Crop Name",
            hover_data=["Suitability Score", "Failure Reasons", "area_ha", "source_file"],
@@ -247,11 +244,7 @@ if crop_file and climate_files:
             )
 
         st.plotly_chart(fig_map, use_container_width=True)
-
-        # Histogram
         st.subheader("Interactive Analysis")
-        selected_crop = st.selectbox("Select Crop", suitability_df['Crop Name'].unique())
-        filtered_crop_df = suitability_df[suitability_df['Crop Name'] == selected_crop]
 
         # Pie Chart: Suitability Category Breakdown
         st.plotly_chart(
@@ -263,22 +256,9 @@ if crop_file and climate_files:
         top_area_df = suitability_df[suitability_df['Suitability Category'] == 'High']
         bar_df = top_area_df.groupby('Crop Name')['area_ha'].sum().reset_index().sort_values(by='area_ha', ascending=False).head(10)
         st.plotly_chart(
-            px.bar(bar_df, x='Crop Name', y='area_ha', title= "Top 5 Crops with the Largest Area Classified as Highly Suitable"),
+            px.bar(bar_df, x='Crop Name', y='area_ha', title= "Crop performace by area (ha) classifed as highly suitable"),
             use_container_width=True
         )
-
-        # Pie Chart: Common Reasons for Unsuitability
-        failure_series = suitability_df['Failure Reasons'].str.split(', ').explode()
-        failure_counts = failure_series.value_counts().reset_index()
-        failure_counts.columns = ['Common Reasons for Crop Unsuitability Across All Areas', 'Count']
-
-        st.plotly_chart(
-            px.pie(
-        failure_counts,
-        names='Common Reasons for Crop Unsuitability Across All Areas',  # must match new column name
-        values='Count',
-        title='Reasons Why Land Was Deemed Unsuitable for Crops'),
-        use_container_width=True)
 
     else:
         st.warning("Please select at least one crop and one province to view the results.")
@@ -287,6 +267,7 @@ if crop_file and climate_files:
 # --- Footer ---
 st.markdown("---")
 st.markdown("© Developed by Sasol Research & Technology: Feedstock (2025)")
+
 
 
 
