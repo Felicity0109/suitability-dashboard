@@ -166,8 +166,9 @@ if crop_file and climate_files:
 
     # --- Conditional Rendering ---
     if selected_provinces and selected_crops:
-        filtered_df = suitability_df[(suitability_df['source_file'].isin(selected_provinces)) & (suitability_df['Crop Name'].isin(selected_crops))])
-        ]
+        filtered_df = suitability_df[
+        (suitability_df['source_file'].isin(selected_provinces)) & 
+        (suitability_df['Crop Name'].isin(selected_crops))]
         #if selected_failures:
          #   pattern = '|'.join(selected_failures)
          #   filtered_df = filtered_df[filtered_df['Failure Reasons'].str.contains(pattern)]
@@ -286,6 +287,7 @@ if crop_file and climate_files:
 # --- Footer ---
 st.markdown("---")
 st.markdown("© Developed by Sasol Research & Technology: Feedstock (2025)")
+
 
 
 
