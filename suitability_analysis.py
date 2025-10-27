@@ -176,41 +176,51 @@ if crop_file and climate_files:
                 # --- Provincial Breakdown Table ---
         st.subheader("Provincial Summary")
 
-        def compute_provincial_summary(df):
-            # Extract province name from source_file (remove extension)
-            df['Province'] = df['source_file'].str.replace('.xlsx', '', regex=False)
+        def compute_provincial_summary(df, crop_df):
+    # Extract province name from source_file (remove extension)
+    df = df.copy()
+    df['Province'] = df['source_file'].str.replace('.xlsx', '', regex=False)
+    
+    # Merge bioenergy info from crop_df
+    crop_info = crop_df[['Crop Name', 'bioenergy category', 'average power density']]
+    df = df.merge(crop_info, on='Crop Name', how='left')
+    
+    summary = []
+    for (province, crop_name), group in df.groupby(['Province', 'Crop Name']):
+        avg_score = group['Suitability Score'].mean()
+        total = len(group)
+        high = (group['Suitability Category'] == 'High').sum()
+        moderate = (group['Suitability Category'] == 'Moderate').sum()
+        low = (group['Suitability Category'] == 'Low').sum()
 
-            summary = []
-            for province, group in df.groupby('Province'):
-                avg_score = group['Suitability Score'].mean()
+        # Proportions
+        high_pct = (high / total) * 100 if total > 0 else 0
+        moderate_pct = (moderate / total) * 100 if total > 0 else 0
+        low_pct = (low / total) * 100 if total > 0 else 0
 
-                total = len(group)
-                high = (group['Suitability Category'] == 'High').sum()
-                moderate = (group['Suitability Category'] == 'Moderate').sum()
-                low = (group['Suitability Category'] == 'Low').sum()
+        # Most common limiting factor
+        failure_series = group['Failure Reasons'].str.split(',').explode().str.strip()
+        failure_series = failure_series[failure_series != 'None']
+        main_limiting = failure_series.value_counts().idxmax() if not failure_series.empty else 'None'
 
-                # Calculate proportions
-                high_pct = (high / total) * 100 if total > 0 else 0
-                moderate_pct = (moderate / total) * 100 if total > 0 else 0
-                low_pct = (low / total) * 100 if total > 0 else 0
+        # Get bioenergy info (same for the crop)
+        bio_category = group['bioenergy category'].iloc[0] if 'bioenergy category' in group.columns else 'N/A'
+        avg_power = group['average power density'].iloc[0] if 'average power density' in group.columns else 'N/A'
 
-                # Determine the most common limiting factor (excluding 'None')
-                failure_series = group['Failure Reasons'].str.split(',').explode().str.strip()
-                failure_series = failure_series[failure_series != 'None']
-                main_limiting = failure_series.value_counts().idxmax() if not failure_series.empty else 'None'
+        summary.append({
+            'Province': province,
+            'Crop Name': crop_name,
+            'Average Suitability Score': round(avg_score, 2),
+            'High (%)': round(high_pct, 1),
+            'Moderate (%)': round(moderate_pct, 1),
+            'Low (%)': round(low_pct, 1),
+            'Main Limiting Factor': main_limiting,
+            'Bioenergy Category': bio_category,
+            'Average Power Density (W/m³)': avg_power
+        })
 
-                summary.append({
-                    'Province': province,
-                    'Average Suitability Score': round(avg_score, 2),
-                    'High (%)': round(high_pct, 1),
-                    'Moderate (%)': round(moderate_pct, 1),
-                    'Low (%)': round(low_pct, 1),
-                    'Main Limiting Factor': main_limiting
-                })
+    return pd.DataFrame(summary)
 
-            return pd.DataFrame(summary)
-
-        provincial_summary_df = compute_provincial_summary(filtered_df)
 
         st.dataframe(
             provincial_summary_df.style.format({
@@ -276,6 +286,7 @@ if crop_file and climate_files:
 # --- Footer ---
 st.markdown("---")
 st.markdown("© Developed by Sasol Research & Technology: Feedstock (2025)")
+
 
 
 
