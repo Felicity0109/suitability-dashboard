@@ -251,14 +251,16 @@ if crop_file and climate_files:
         st.plotly_chart(fig_map, use_container_width=True)
 
         st.subheader("Interactive Analysis")
+        # Let the user pick one crop for detailed analysis
+        selected_crop = st.selectbox("Select Crop for Detailed Analysis", filtered_df['Crop Name'].unique())
 
-        # Pie Chart: Suitability Category Breakdown
+        # Filter the plot_df for the selected crop
         plot_crop_df = plot_df[plot_df['Crop Name'] == selected_crop]
+
         # Pie Chart: Suitability Category Breakdown
         st.plotly_chart(
            px.pie(plot_crop_df, names='Suitability Category', title=f"Suitability Categories for {selected_crop}"),
-           use_container_width=True
-          )
+           use_container_width=True)
 
         # Bar Chart: Top Performing Crops by Area
         top_area_df = suitability_df[suitability_df['Suitability Category'] == 'High']
@@ -275,6 +277,7 @@ if crop_file and climate_files:
 # --- Footer ---
 st.markdown("---")
 st.markdown("© Developed by Sasol Research & Technology: Feedstock (2025)")
+
 
 
 
