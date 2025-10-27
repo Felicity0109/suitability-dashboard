@@ -224,33 +224,9 @@ if crop_file and climate_files:
 
         # Suitability Map
         st.subheader("Suitability Map")
-        color_map = {
-            "High": "green",
-            "Moderate": "orange",
-            "Low": "red",
-            "Unsuitable": "gray"
-        }
-        fig_map = px.scatter_mapbox(
-           filtered_df,
-           lat="y",
-           lon="x",
-           color="Suitability Score",
-           color_continuous_scale="Turbo",
-           #color_discrete_map=color_map,
-           hover_name="Crop Name",
-           hover_data=["Suitability Score", "Failure Reasons", "area_ha", "source_file"],
-           mapbox_style="open-street-map",
-           zoom=7,
-           height=500
-            )
-
-        st.plotly_chart(fig_map, use_container_width=True)
-
         plot_df = filtered_df.copy()
         plot_df['Plot Score'] = plot_df['Suitability Score']
         plot_df.loc[plot_df['Suitability Category'] == 'Unsuitable', 'Plot Score'] = -1
-
-
         color_scale = [
            [0.0, "lightgrey"],  # -1 mapped to 0 fraction for grey
            [0.0001, "red"],     # start of actual suitability
@@ -267,7 +243,7 @@ if crop_file and climate_files:
          color_continuous_scale=color_scale,
          range_color=[-1, 9],  # include -1 for grey
          hover_name="Crop Name",
-         hover_data=["Suitability Score", "Suitability Category", "Failure Reasons", "area_ha", "source_file"],
+         hover_data=["Suitability Score", "Suitability Category", "Failure Reasons", "area_ha"],
          mapbox_style="open-street-map",
          zoom=7,
          height=500
@@ -278,7 +254,7 @@ if crop_file and climate_files:
 
         # Pie Chart: Suitability Category Breakdown
         st.plotly_chart(
-            px.pie(filtered_df, names='Suitability Category', title=f"Suitability Categories for {selected_crop}"),
+            px.pie(plot_df, names='Suitability Category', title=f"Suitability Categories for {selected_crop}"),
             use_container_width=True
         )
 
@@ -297,6 +273,7 @@ if crop_file and climate_files:
 # --- Footer ---
 st.markdown("---")
 st.markdown("© Developed by Sasol Research & Technology: Feedstock (2025)")
+
 
 
 
