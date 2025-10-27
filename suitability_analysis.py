@@ -160,61 +160,61 @@ if crop_file and climate_files:
         
                 # --- Provincial Breakdown Table ---
         st.subheader("Provincial Summary")
-    def compute_provincial_summary(df, crop_df):
-        df = df.copy()
-        df['Province'] = df['source_file'].str.replace('.xlsx', '', regex=False)
-        
-        # Merge bioenergy info from crop_df
-        crop_info = crop_df[['Crop Name', 'bioenergy category', 'average power density']]
-        df = df.merge(crop_info, on='Crop Name', how='left')
+        def compute_provincial_summary(df, crop_df):
+            df = df.copy()
+            df['Province'] = df['source_file'].str.replace('.xlsx', '', regex=False)
+            
+            # Merge bioenergy info from crop_df
+            crop_info = crop_df[['Crop Name', 'bioenergy category', 'average power density']]
+            df = df.merge(crop_info, on='Crop Name', how='left')
+    
+            summary = []
+            for (province, crop_name), group in df.groupby(['Province', 'Crop Name']):
+                avg_score = group['Suitability Score'].mean()
+                total = len(group)
+                high = (group['Suitability Category'] == 'High').sum()
+                moderate = (group['Suitability Category'] == 'Moderate').sum()
+                low = (group['Suitability Category'] == 'Low').sum()
+    
+                # Proportions
+                high_pct = (high / total) * 100 if total > 0 else 0
+                moderate_pct = (moderate / total) * 100 if total > 0 else 0
+                low_pct = (low / total) * 100 if total > 0 else 0
+    
+                # Most common limiting factor
+                failure_series = group['Failure Reasons'].str.split(',').explode().str.strip()
+                failure_series = failure_series[failure_series != 'None']
+                main_limiting = failure_series.value_counts().idxmax() if not failure_series.empty else 'None'
+    
+                # Get bioenergy info
+                bio_category = group['bioenergy category'].iloc[0] if 'bioenergy category' in group.columns else 'N/A'
+                avg_power = group['average power density'].iloc[0] if 'average power density' in group.columns else 'N/A'
+    
+                summary.append({
+                    'Province': province,
+                    'Crop Name': crop_name,
+                    'Average Suitability Score': round(avg_score, 2),
+                    'High (%)': round(high_pct, 1),
+                    'Moderate (%)': round(moderate_pct, 1),
+                    'Low (%)': round(low_pct, 1),
+                    'Main Limiting Factor': main_limiting,
+                    'Bioenergy Category': bio_category,
+                    'Average Power Density (W/m³)': avg_power
+                })
+    
+            return pd.DataFrame(summary)
 
-        summary = []
-        for (province, crop_name), group in df.groupby(['Province', 'Crop Name']):
-            avg_score = group['Suitability Score'].mean()
-            total = len(group)
-            high = (group['Suitability Category'] == 'High').sum()
-            moderate = (group['Suitability Category'] == 'Moderate').sum()
-            low = (group['Suitability Category'] == 'Low').sum()
-
-            # Proportions
-            high_pct = (high / total) * 100 if total > 0 else 0
-            moderate_pct = (moderate / total) * 100 if total > 0 else 0
-            low_pct = (low / total) * 100 if total > 0 else 0
-
-            # Most common limiting factor
-            failure_series = group['Failure Reasons'].str.split(',').explode().str.strip()
-            failure_series = failure_series[failure_series != 'None']
-            main_limiting = failure_series.value_counts().idxmax() if not failure_series.empty else 'None'
-
-            # Get bioenergy info
-            bio_category = group['bioenergy category'].iloc[0] if 'bioenergy category' in group.columns else 'N/A'
-            avg_power = group['average power density'].iloc[0] if 'average power density' in group.columns else 'N/A'
-
-            summary.append({
-                'Province': province,
-                'Crop Name': crop_name,
-                'Average Suitability Score': round(avg_score, 2),
-                'High (%)': round(high_pct, 1),
-                'Moderate (%)': round(moderate_pct, 1),
-                'Low (%)': round(low_pct, 1),
-                'Main Limiting Factor': main_limiting,
-                'Bioenergy Category': bio_category,
-                'Average Power Density (W/m³)': avg_power
-            })
-
-        return pd.DataFrame(summary)
-
-    provincial_summary_df = compute_provincial_summary(filtered_df, crop_df)
-    st.dataframe(
-        provincial_summary_df.style.format({
-            'Average Suitability Score': "{:.2f}",
-            'High (%)': "{:.1f}",
-            'Moderate (%)': "{:.1f}",
-            'Low (%)': "{:.1f}",
-            'Average Power Density (W/m³)': "{:.2f}"
-        }),
-        use_container_width=True
-    )
+        provincial_summary_df = compute_provincial_summary(filtered_df, crop_df)
+        st.dataframe(
+            provincial_summary_df.style.format({
+                    'Average Suitability Score': "{:.2f}",
+                    'High (%)': "{:.1f}",
+                    'Moderate (%)': "{:.1f}",
+                    'Low (%)': "{:.1f}",
+                    'Average Power Density (W/m³)': "{:.2f}"
+            }),
+            use_container_width=True
+            )
  
 
         # Suitability Map
@@ -271,6 +271,7 @@ if crop_file and climate_files:
 # --- Footer ---
 st.markdown("---")
 st.markdown("© Developed by Sasol Research & Technology: Feedstock (2025)")
+
 
 
 
