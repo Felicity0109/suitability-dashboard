@@ -224,8 +224,8 @@ if crop_file and climate_files:
         # Suitability Map
         st.subheader("Suitability Map")
         plot_df = filtered_df.copy()
-        plot_df['Plot Score'] = plot_df['Suitability Score']
-        plot_df.loc[plot_df['Suitability Category'] == 'Unsuitable', 'Plot Score'] = -1
+        plot_df['Score'] = plot_df['Suitability Score']
+        plot_df.loc[plot_df['Suitability Category'] == 'Unsuitable', 'Score'] = -1
         color_scale = [
            [0.0, "lightgrey"],  # -1 mapped to 0 fraction for grey
            [0.0001, "red"],     # start of actual suitability
@@ -238,7 +238,7 @@ if crop_file and climate_files:
          plot_df,
          lat="y",
          lon="x",
-         color="Plot Score",
+         color="Score",
          color_continuous_scale=color_scale,
          range_color=[-1, 9],  # include -1 for grey
          hover_name="Crop Name",
@@ -275,6 +275,7 @@ if crop_file and climate_files:
 # --- Footer ---
 st.markdown("---")
 st.markdown("© Developed by Sasol Research & Technology: Feedstock (2025)")
+
 
 
 
