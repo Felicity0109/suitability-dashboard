@@ -22,6 +22,7 @@ climate_files = st.sidebar.file_uploader("Upload Land and Climate Data for Provi
 def load_crop_data(file):
     return pd.read_excel(file)
 
+@st.cache_data
 def load_climate_data(files):
     df_list = []
     for f in files:
@@ -130,17 +131,8 @@ if crop_file and climate_files:
         else:
             combined_climate_df['area_ha'] = 0
 
-        suitability_df = calculate_suitability(combined_climate_df, crop_df)
-
-        suitability_df = suitability_df.merge(
-            combined_climate_df[['x', 'y', 'area_ha', 'source_file']],
-            on=['x', 'y'],
-            how='left'
-        )
-
-        suitability_df['Suitability Category'] = suitability_df['Suitability Score'].apply(categorize_score)
-
     st.success("Data successfully processed.")
+    
     all_failures = set()
     selected_provinces = st.sidebar.multiselect(
         "Select Provinces",
@@ -150,15 +142,26 @@ if crop_file and climate_files:
     selected_crops = st.multiselect("Select Crops to Compare", crop_df['Crop Name'].unique(), default=[])
 
     # --- Conditional Rendering ---
+    # After user selects crops and provinces
     if selected_provinces and selected_crops:
-        filtered_df = suitability_df[
-        (suitability_df['source_file'].isin(selected_provinces)) & 
-        (suitability_df['Crop Name'].isin(selected_crops))]
-        #if selected_failures:
-         #   pattern = '|'.join(selected_failures)
-         #   filtered_df = filtered_df[filtered_df['Failure Reasons'].str.contains(pattern)]
-        
-                # --- Provincial Breakdown Table ---
+    # Filter crop data first
+       filtered_crop_df = crop_df[crop_df['Crop Name'].isin(selected_crops)]
+    
+    # Optionally filter climate data by province
+       filtered_climate_df = combined_climate_df[combined_climate_df['source_file'].isin(selected_provinces)]
+    
+    # Compute suitability only for selected crops and provinces
+       suitability_df = calculate_suitability(filtered_climate_df, filtered_crop_df)
+
+    # Then merge, categorize, and continue as usual
+       suitability_df = suitability_df.merge(
+           filtered_climate_df[['x', 'y', 'area_ha', 'source_file']],
+           on=['x', 'y'],
+           how='left'
+       )
+       suitability_df['Suitability Category'] = suitability_df['Suitability Score'].apply(categorize_score)
+
+        # --- Provincial Breakdown Table ---
         st.subheader("Provincial Summary")
         def compute_provincial_summary(df, crop_df):
             df = df.copy()
@@ -275,6 +278,7 @@ if crop_file and climate_files:
 # --- Footer ---
 st.markdown("---")
 st.markdown("© Developed by Sasol Research & Technology: Feedstock (2025)")
+
 
 
 
