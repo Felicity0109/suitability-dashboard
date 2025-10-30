@@ -117,14 +117,9 @@ def categorize_score(score):
 if crop_file and climate_files:
     with st.spinner("Processing data... Please wait."):
         crop_df = load_crop_data(crop_file)
+        combined_climate_df = load_climate_data(climate_files)
 
-        dfs = []
-        for f in climate_files:
-            temp_df = pd.read_excel(f)
-            temp_df['source_file'] = f.name
-            dfs.append(temp_df)
-        combined_climate_df = pd.concat(dfs, ignore_index=True) if dfs else pd.DataFrame()
-
+        # Handle Fallow land area
         if "Fallow land area" in combined_climate_df.columns:
             combined_climate_df.rename(columns={"Fallow land area": "area_ha"}, inplace=True)
             combined_climate_df['area_ha'] = pd.to_numeric(combined_climate_df['area_ha'], errors='coerce').fillna(0)
@@ -132,45 +127,42 @@ if crop_file and climate_files:
             combined_climate_df['area_ha'] = 0
 
     st.success("Data successfully processed.")
-    
-    all_failures = set()
+
+    # Sidebar selections
     selected_provinces = st.sidebar.multiselect(
         "Select Provinces",
-        options=suitability_df['source_file'].unique(),
+        options=combined_climate_df['source_file'].unique(),
         default=[]
     )
-    selected_crops = st.multiselect("Select Crops to Compare", crop_df['Crop Name'].unique(), default=[])
+    selected_crops = st.sidebar.multiselect(
+        "Select Crops to Compare",
+        crop_df['Crop Name'].unique(),
+        default=[]
+    )
 
     # --- Conditional Rendering ---
-    # After user selects crops and provinces
     if selected_provinces and selected_crops:
-    # Filter crop data first
-       filtered_crop_df = crop_df[crop_df['Crop Name'].isin(selected_crops)]
-    
-    # Optionally filter climate data by province
-       filtered_climate_df = combined_climate_df[combined_climate_df['source_file'].isin(selected_provinces)]
-    
-    # Compute suitability only for selected crops and provinces
-       suitability_df = calculate_suitability(filtered_climate_df, filtered_crop_df)
+        # Filter crop and climate data
+        filtered_crop_df = crop_df[crop_df['Crop Name'].isin(selected_crops)]
+        filtered_climate_df = combined_climate_df[combined_climate_df['source_file'].isin(selected_provinces)]
 
-    # Then merge, categorize, and continue as usual
-       suitability_df = suitability_df.merge(
-           filtered_climate_df[['x', 'y', 'area_ha', 'source_file']],
-           on=['x', 'y'],
-           how='left'
-       )
-       suitability_df['Suitability Category'] = suitability_df['Suitability Score'].apply(categorize_score)
+        # Compute suitability
+        suitability_df = calculate_suitability(filtered_climate_df, filtered_crop_df)
+        suitability_df = suitability_df.merge(
+            filtered_climate_df[['x', 'y', 'area_ha', 'source_file']],
+            on=['x', 'y'],
+            how='left'
+        )
+        suitability_df['Suitability Category'] = suitability_df['Suitability Score'].apply(categorize_score)
 
         # --- Provincial Breakdown Table ---
-    st.subheader("Provincial Summary")
+        st.subheader("Provincial Summary")
+
         def compute_provincial_summary(df, crop_df):
             df = df.copy()
             df['Province'] = df['source_file'].str.replace('.xlsx', '', regex=False)
-            
-            # Merge bioenergy info from crop_df
             crop_info = crop_df[['Crop Name', 'Bioenergy category', 'Average Power Density']]
             df = df.merge(crop_info, on='Crop Name', how='left')
-    
             summary = []
             for (province, crop_name), group in df.groupby(['Province', 'Crop Name']):
                 avg_score = group['Suitability Score'].mean()
@@ -178,21 +170,21 @@ if crop_file and climate_files:
                 high = (group['Suitability Category'] == 'High').sum()
                 moderate = (group['Suitability Category'] == 'Moderate').sum()
                 low = (group['Suitability Category'] == 'Low').sum()
-    
+
                 # Proportions
                 high_pct = (high / total) * 100 if total > 0 else 0
                 moderate_pct = (moderate / total) * 100 if total > 0 else 0
                 low_pct = (low / total) * 100 if total > 0 else 0
-    
+
                 # Most common limiting factor
                 failure_series = group['Failure Reasons'].str.split(',').explode().str.strip()
                 failure_series = failure_series[failure_series != 'None']
                 main_limiting = failure_series.value_counts().idxmax() if not failure_series.empty else 'None'
-    
-                # Get bioenergy info
+
+                # Bioenergy info
                 bio_category = group['Bioenergy category'].iloc[0] if 'Bioenergy category' in group.columns else 'N/A'
                 avg_power = group['Average Power Density'].iloc[0] if 'Average Power Density' in group.columns else 'N/A'
-    
+
                 summary.append({
                     'Province': province,
                     'Crop Name': crop_name,
@@ -204,70 +196,22 @@ if crop_file and climate_files:
                     'Bioenergy category': bio_category,
                     'Average Power Density (W/m³)': avg_power
                 })
-    
             return pd.DataFrame(summary)
+
         numeric_cols = ['Average Suitability Score', 'High (%)', 'Moderate (%)', 'Low (%)', 'Average Power Density (W/m³)']
-        provincial_summary_df = compute_provincial_summary(filtered_df, crop_df)
+        provincial_summary_df = compute_provincial_summary(suitability_df, crop_df)
         for col in numeric_cols:
             if col in provincial_summary_df.columns:
                 provincial_summary_df[col] = pd.to_numeric(provincial_summary_df[col], errors='coerce')
 
         st.dataframe(
             provincial_summary_df.style.format({
-                    'Average Suitability Score': "{:.2f}",
-                    'High (%)': "{:.1f}",
-                    'Moderate (%)': "{:.1f}",
-                    'Low (%)': "{:.1f}",
-                    'Average Power Density (W/m³)': "{:.2f}"
-            }, na_rep= "N/A"),
-            use_container_width=True
-            )
- 
-
-        # Suitability Map
-        st.subheader("Suitability Map")
-        plot_df = filtered_df.copy()
-        plot_df['Score'] = plot_df['Suitability Score']
-        plot_df.loc[plot_df['Suitability Category'] == 'Unsuitable', 'Score'] = -1
-        color_scale = [
-           [0.0, "lightgrey"],  # -1 mapped to 0 fraction for grey
-           [0.0001, "red"],     # start of actual suitability
-           [0.5, "orange"],     # medium
-           [1.0, "green"]       # high
-        ]
-
-# Normalize scores for color scale (0–9 normal range)
-        fig_map = px.scatter_mapbox(
-         plot_df,
-         lat="y",
-         lon="x",
-         color="Score",
-         color_continuous_scale=color_scale,
-         range_color=[-1, 9],  # include -1 for grey
-         hover_name="Crop Name",
-         hover_data=["Suitability Score", "Suitability Category", "Failure Reasons", "area_ha"],
-         mapbox_style="open-street-map",
-         zoom=7,
-         height=500
-     )
-        st.plotly_chart(fig_map, use_container_width=True)
-
-        # Let the user pick one crop for detailed analysis
-        selected_crop = st.selectbox("Select Crop for Detailed Analysis", filtered_df['Crop Name'].unique())
-
-        # Filter the plot_df for the selected crop
-        plot_crop_df = plot_df[plot_df['Crop Name'] == selected_crop]
-
-        # Pie Chart: Suitability Category Breakdown
-        st.plotly_chart(
-           px.pie(plot_crop_df, names='Suitability Category', title=f"Suitability Categories for {selected_crop}"),
-           use_container_width=True)
-
-        # Bar Chart: Top Performing Crops by Area
-        top_area_df = suitability_df[suitability_df['Suitability Category'] == 'High']
-        bar_df = top_area_df.groupby('Crop Name')['area_ha'].sum().reset_index().sort_values(by='area_ha', ascending=False).head(10)
-        st.plotly_chart(
-            px.bar(bar_df, x='Crop Name', y='area_ha', title= "Crop performace by area (ha) classifed as highly suitable"),
+                'Average Suitability Score': "{:.2f}",
+                'High (%)': "{:.1f}",
+                'Moderate (%)': "{:.1f}",
+                'Low (%)': "{:.1f}",
+                'Average Power Density (W/m³)': "{:.2f}"
+            }, na_rep="N/A"),
             use_container_width=True
         )
 
@@ -278,6 +222,7 @@ if crop_file and climate_files:
 # --- Footer ---
 st.markdown("---")
 st.markdown("© Developed by Sasol Research & Technology: Feedstock (2025)")
+
 
 
 
