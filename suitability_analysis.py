@@ -162,7 +162,7 @@ if crop_file and climate_files:
        suitability_df['Suitability Category'] = suitability_df['Suitability Score'].apply(categorize_score)
 
         # --- Provincial Breakdown Table ---
-        st.subheader("Provincial Summary")
+    st.subheader("Provincial Summary")
         def compute_provincial_summary(df, crop_df):
             df = df.copy()
             df['Province'] = df['source_file'].str.replace('.xlsx', '', regex=False)
@@ -278,6 +278,7 @@ if crop_file and climate_files:
 # --- Footer ---
 st.markdown("---")
 st.markdown("© Developed by Sasol Research & Technology: Feedstock (2025)")
+
 
 
 
