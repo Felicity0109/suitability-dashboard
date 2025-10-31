@@ -27,7 +27,7 @@ def load_climate_data(files):
     df_list = []
     for f in files:
         temp_df = pd.read_excel(f)
-        temp_df["source_file"] = f.name   # ✅ Add this line
+        temp_df["source_file"] = f.name   # Add this line
         df_list.append(temp_df)
     if df_list:
         combined_df = pd.concat(df_list, ignore_index=True)
@@ -114,151 +114,92 @@ def categorize_score(score):
     else:
         return 'Unsuitable'
 
-# --- Main Logic ---
+# ---------------------- MAIN LOGIC ----------------------
 if crop_file and climate_files:
-    with st.spinner("Processing data... Please wait."):
+    with st.spinner("Loading & processing data..."):
         crop_df = load_crop_data(crop_file)
-        combined_climate_df = load_climate_data(climate_files)
+        climate_df = load_climate_data(climate_files)
 
-        # Handle Fallow land area
-        if "Fallow land area" in combined_climate_df.columns:
-            combined_climate_df.rename(columns={"Fallow land area": "area_ha"}, inplace=True)
-            combined_climate_df['area_ha'] = pd.to_numeric(combined_climate_df['area_ha'], errors='coerce').fillna(0)
-        else:
-            combined_climate_df['area_ha'] = 0
+        # Handle fallow land field
+        if "Fallow land area" in climate_df.columns:
+            climate_df.rename(columns={"Fallow land area": "area_ha"}, inplace=True)
+        climate_df["area_ha"] = pd.to_numeric(climate_df.get("area_ha", 0), errors="coerce").fillna(0)
 
-    st.success("Data successfully processed.")
+    st.success("✅ Data loaded successfully.")
 
-    # Sidebar selections
-    selected_provinces = st.sidebar.multiselect(
-        "Select Provinces",
-        options=combined_climate_df['source_file'].unique(),
-        default=[]
-    )
-    selected_crops = st.sidebar.multiselect(
-        "Select Crops to Compare",
-        crop_df['Crop Name'].unique(),
-        default=[]
-    )
+    # Sidebar selection
+    selected_provinces = st.sidebar.multiselect("Select Provinces", climate_df['source_file'].unique())
+    selected_crops = st.sidebar.multiselect("Select Crops", crop_df['Crop Name'].unique())
 
-    # --- Conditional Rendering ---
-    if selected_provinces and selected_crops:
-        # Filter crop and climate data
-        filtered_crop_df = crop_df[crop_df['Crop Name'].isin(selected_crops)]
-        filtered_climate_df = combined_climate_df[combined_climate_df['source_file'].isin(selected_provinces)]
-
-        # Compute suitability
-        suitability_df = calculate_suitability(filtered_climate_df, filtered_crop_df)
-        suitability_df = suitability_df.merge(
-            filtered_climate_df[['x', 'y', 'area_ha', 'source_file']],
-            on=['x', 'y'],
-            how='left'
-        )
-        suitability_df['Suitability Category'] = suitability_df['Suitability Score'].apply(categorize_score)
-
-        # --- Provincial Breakdown Table ---
-        st.subheader("Provincial Summary")
-
-        def compute_provincial_summary(df, crop_df):
-            df = df.copy()
-            df['Province'] = df['source_file'].str.replace('.xlsx', '', regex=False)
-            crop_info = crop_df[['Crop Name', 'Bioenergy category', 'Average Power Density']]
-            df = df.merge(crop_info, on='Crop Name', how='left')
-            summary = []
-            for (province, crop_name), group in df.groupby(['Province', 'Crop Name']):
-                avg_score = group['Suitability Score'].mean()
-                total = len(group)
-                high = (group['Suitability Category'] == 'High').sum()
-                moderate = (group['Suitability Category'] == 'Moderate').sum()
-                low = (group['Suitability Category'] == 'Low').sum()
-
-                # Proportions
-                high_pct = (high / total) * 100 if total > 0 else 0
-                moderate_pct = (moderate / total) * 100 if total > 0 else 0
-                low_pct = (low / total) * 100 if total > 0 else 0
-
-                # Most common limiting factor
-                failure_series = group['Failure Reasons'].str.split(',').explode().str.strip()
-                failure_series = failure_series[failure_series != 'None']
-                main_limiting = failure_series.value_counts().idxmax() if not failure_series.empty else 'None'
-
-                # Bioenergy info
-                bio_category = group['Bioenergy category'].iloc[0] if 'Bioenergy category' in group.columns else 'N/A'
-                avg_power = group['Average Power Density'].iloc[0] if 'Average Power Density' in group.columns else 'N/A'
-
-                summary.append({
-                    'Province': province,
-                    'Crop Name': crop_name,
-                    'Average Suitability Score': round(avg_score, 2),
-                    'High (%)': round(high_pct, 1),
-                    'Moderate (%)': round(moderate_pct, 1),
-                    'Low (%)': round(low_pct, 1),
-                    'Main Limiting Factor': main_limiting,
-                    'Bioenergy category': bio_category,
-                    'Average Power Density (W/m³)': avg_power
-                })
-            return pd.DataFrame(summary)
-
-        numeric_cols = ['Average Suitability Score', 'High (%)', 'Moderate (%)', 'Low (%)', 'Average Power Density (W/m³)']
-        provincial_summary_df = compute_provincial_summary(suitability_df, crop_df)
-        for col in numeric_cols:
-            if col in provincial_summary_df.columns:
-                provincial_summary_df[col] = pd.to_numeric(provincial_summary_df[col], errors='coerce')
-
-        st.dataframe(
-            provincial_summary_df.style.format({
-                'Average Suitability Score': "{:.2f}",
-                'High (%)': "{:.1f}",
-                'Moderate (%)': "{:.1f}",
-                'Low (%)': "{:.1f}",
-                'Average Power Density (W/m³)': "{:.2f}"
-            }, na_rep="N/A"),
-            use_container_width=True
-        )
-
-    else:
-        st.warning("Please select at least one crop and one province to view the results.")
+    if not selected_provinces or not selected_crops:
+        st.info("⬅️ Select provinces and crops to continue")
         st.stop()
+
+    # Filter based on user selection
+    filtered_climate = climate_df[climate_df['source_file'].isin(selected_provinces)]
+    filtered_crop = crop_df[crop_df['Crop Name'].isin(selected_crops)]
+
+    # Calculate suitability
+    suitability_df = calculate_suitability(filtered_climate, filtered_crop)
+    suitability_df = suitability_df.merge(
+        filtered_climate[['x', 'y', 'area_ha', 'source_file']], 
+        on=['x', 'y'], how='left'
+    )
+    suitability_df['Suitability Category'] = suitability_df['Suitability Score'].apply(categorize_score)
+
+
+    # ---------------------- MAP ----------------------
+    st.subheader("📍 Suitability Map")
+
+    plot_df = suitability_df.copy()
+    plot_df['Score'] = plot_df['Suitability Score']
+    plot_df.loc[plot_df['Suitability Category']=="Unsuitable", 'Score'] = -1
+
+    fig = px.scatter_mapbox(
+        plot_df, lat="y", lon="x",
+        color="Score",
+        color_continuous_scale=["lightgrey","red","orange","green"],
+        range_color=[-1,9],
+        hover_data=["Crop Name","Suitability Score","Failure Reasons","area_ha"],
+        mapbox_style="open-street-map", zoom=5, height=500
+    )
+    st.plotly_chart(fig, use_container_width=True)
+
+
+    # ---------------------- Pie Chart ----------------------
+    selected_crop = st.selectbox("Select crop for breakdown", suitability_df['Crop Name'].unique())
+    crop_df_sel = plot_df[plot_df['Crop Name']==selected_crop]
+
+    st.plotly_chart(
+        px.pie(crop_df_sel, names="Suitability Category", title=f"Suitability Distribution: {selected_crop}"),
+        use_container_width=True
+    )
+
+
+    # ---------------------- Top Crop Areas ----------------------
+    high_df = suitability_df[suitability_df["Suitability Category"]=="High"]
+    top_area = high_df.groupby("Crop Name")["area_ha"].sum().reset_index().sort_values(by="area_ha", ascending=False).head(10)
+
+    st.subheader(" Top Suitable Crops by Area (ha)")
+    st.plotly_chart(px.bar(top_area, x="Crop Name", y="area_ha"), use_container_width=True)
+
+
+    # ---------------------- Provincial Summary ----------------------
+    st.subheader(" Provincial Suitability Summary")
+
+    summary = suitability_df.groupby(["source_file", "Crop Name"]).agg(
+        Avg_Score=("Suitability Score","mean"),
+        High=("Suitability Category", lambda x: (x=="High").mean()*100),
+        Moderate=("Suitability Category", lambda x: (x=="Moderate").mean()*100),
+        Low=("Suitability Category", lambda x: (x=="Low").mean()*100),
+    ).reset_index()
+
+    st.dataframe(summary, use_container_width=True)
+
+else:
+    st.info(" Upload datasets to begin.")
+
 
 # --- Footer ---
 st.markdown("---")
 st.markdown("© Developed by Sasol Research & Technology: Feedstock (2025)")
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
