@@ -27,6 +27,7 @@ def load_climate_data(files):
     df_list = []
     for f in files:
         temp_df = pd.read_excel(f)
+        temp_df["source_file"] = f.name   # ✅ Add this line
         df_list.append(temp_df)
     if df_list:
         combined_df = pd.concat(df_list, ignore_index=True)
@@ -222,6 +223,7 @@ if crop_file and climate_files:
 # --- Footer ---
 st.markdown("---")
 st.markdown("© Developed by Sasol Research & Technology: Feedstock (2025)")
+
 
 
 
