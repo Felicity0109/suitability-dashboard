@@ -91,16 +91,16 @@ def calculate_suitability(climate_df, crop_df):
         crop_name = crop['Crop Name']
         for _, row in climate_df.iterrows():
             score = sum([
-                row['Rainfall Min'] <= crop['Rainfall Min'],   # Area min <= crop min
-                row['Rainfall Max'] >= crop['Rainfall Max'],   # Area max >= crop max
-                row['Temp Min'] <= crop['Temp Min'],           # Area min <= crop min
-                row['Temp Max'] >= crop['Temp Max'],           # Area max >= crop max
-                str(row['Drought Tolerance']).strip() == str(crop['Drought Tolerance']).strip(),
-                is_multi_match(crop['Suitable Köppen Zones'], row['Suitable Köppen Zones']),
-                is_multi_match(crop['Soil Texture'], row['Soil Texture']),
-                is_multi_match(crop['Drainage Preference'], row['Drainage Preference']),
-                str(row['Irrigation Need']).strip().lower() == str(crop['Irrigation Need']).strip().lower()
-            ])
+                    crop['Rainfall Min'] <= row['Rainfall Min'],   # match if crop min <= area min
+                    crop['Rainfall Max'] <= row['Rainfall Max'],   # match if crop max <= area max
+                    crop['Temp Min'] <= row['Temp Min'],           # match if crop min <= area min
+                    crop['Temp Max'] <= row['Temp Max'],           # match if crop max <= area max
+                    str(row['Drought Tolerance']).strip() == str(crop['Drought Tolerance']).strip(),
+                    is_multi_match(crop['Suitable Köppen Zones'], row['Suitable Köppen Zones']),
+                    is_multi_match(crop['Soil Texture'], row['Soil Texture']),
+                    is_multi_match(crop['Drainage Preference'], row['Drainage Preference']),
+                    str(row['Irrigation Need']).strip().lower() == str(crop['Irrigation Need']).strip().lower()])
+
 
             results.append({
                 'Crop Name': crop_name,
@@ -215,6 +215,7 @@ else:
 # --- Footer ---
 st.markdown("---")
 st.markdown("© Developed by Sasol Research & Technology: Feedstock (2025)")
+
 
 
 
