@@ -46,21 +46,24 @@ def is_multi_match(crop_val, land_val):
     except Exception:
         return False
 
-# --- Updated failure checker ---
+# --- failure checker ---
 def check_failures(row, crop):
     failures = []
 
-    # Rainfall: crop must fit within area's range
-    if row['Rainfall Min'] > crop['Rainfall Min']:
-        failures.append('Rainfall Min')
-    if row['Rainfall Max'] < crop['Rainfall Max']:
-        failures.append('Rainfall Max')
-
     # Temperature: crop must fit within area's range
-    if row['Temp Min'] > crop['Temp Min']:
+    if crop['Temp Min'] < row['Temp Min']:
         failures.append('Temp Min')
-    if row['Temp Max'] < crop['Temp Max']:
+
+    # Fail if crop requires lower maximum temp than area allows
+    if crop['Temp Max'] > row['Temp Max']:
         failures.append('Temp Max')
+
+    # Fail if crop requires more rainfall than area provides
+    if crop['Rainfall Min'] > row['Rainfall Min']:
+        failures.append('Rainfall Min')
+
+    if crop['Rainfall Max'] > row['Rainfall Max']:
+        failures.append('Rainfall Max')
 
     # Drought tolerance: strict equality
     if str(row['Drought Tolerance']).strip() != str(crop['Drought Tolerance']).strip():
@@ -212,5 +215,6 @@ else:
 # --- Footer ---
 st.markdown("---")
 st.markdown("© Developed by Sasol Research & Technology: Feedstock (2025)")
+
 
 
