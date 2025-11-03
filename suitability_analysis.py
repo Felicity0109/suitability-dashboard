@@ -35,55 +35,63 @@ def load_climate_data(files):
     else:
         return pd.DataFrame()
 
-# --- Helper function ---
+# --- Helper function for multi-match ---
 def is_multi_match(crop_val, land_val):
-    """
-    Returns True if any value in crop_val exists in land_val.
-    Handles comma-separated strings, ignores spaces and order.
-    """
     if pd.isna(crop_val) or pd.isna(land_val):
         return False
     try:
         crop_set = set(str(crop_val).replace(" ", "").split(","))
         land_set = set(str(land_val).replace(" ", "").split(","))
-        return bool(crop_set & land_set)  # True if any overlap
+        return bool(crop_set & land_set)
     except Exception:
         return False
 
-# --- Suitability Calculation ---
+# --- Updated failure checker ---
 def check_failures(row, crop):
     failures = []
-    if row['Rainfall Min'] < crop['Rainfall Min']:
+
+    # Rainfall: crop must fit within area's range
+    if row['Rainfall Min'] > crop['Rainfall Min']:
         failures.append('Rainfall Min')
-    if row['Rainfall Max'] > crop['Rainfall Max']:
+    if row['Rainfall Max'] < crop['Rainfall Max']:
         failures.append('Rainfall Max')
-    if row['Temp Min'] < crop['Temp Min']:
+
+    # Temperature: crop must fit within area's range
+    if row['Temp Min'] > crop['Temp Min']:
         failures.append('Temp Min')
-    if row['Temp Max'] > crop['Temp Max']:
+    if row['Temp Max'] < crop['Temp Max']:
         failures.append('Temp Max')
+
+    # Drought tolerance: strict equality
     if str(row['Drought Tolerance']).strip() != str(crop['Drought Tolerance']).strip():
         failures.append('Drought Tolerance')
+
+    # Köppen Zones, Soil Texture, Drainage Preference
     if not is_multi_match(crop['Suitable Köppen Zones'], row['Suitable Köppen Zones']):
         failures.append('Suitable Köppen Zones')
     if not is_multi_match(crop['Soil Texture'], row['Soil Texture']):
         failures.append('Soil Texture')
     if not is_multi_match(crop['Drainage Preference'], row['Drainage Preference']):
         failures.append('Drainage Preference')
+
+    # Irrigation Need: strict equality (matches your definition)
     if str(row['Irrigation Need']).strip().lower() != str(crop['Irrigation Need']).strip().lower():
         failures.append('Irrigation Need')
+
     return ', '.join(failures) if failures else 'None'
 
-@st.cache_data
+
+# --- suitability calculation ---
 def calculate_suitability(climate_df, crop_df):
     results = []
     for _, crop in crop_df.iterrows():
         crop_name = crop['Crop Name']
         for _, row in climate_df.iterrows():
             score = sum([
-                row['Rainfall Min'] >= crop['Rainfall Min'],
-                row['Rainfall Max'] <= crop['Rainfall Max'],
-                row['Temp Min'] >= crop['Temp Min'],
-                row['Temp Max'] <= crop['Temp Max'],
+                row['Rainfall Min'] <= crop['Rainfall Min'],   # Area min <= crop min
+                row['Rainfall Max'] >= crop['Rainfall Max'],   # Area max >= crop max
+                row['Temp Min'] <= crop['Temp Min'],           # Area min <= crop min
+                row['Temp Max'] >= crop['Temp Max'],           # Area max >= crop max
                 str(row['Drought Tolerance']).strip() == str(crop['Drought Tolerance']).strip(),
                 is_multi_match(crop['Suitable Köppen Zones'], row['Suitable Köppen Zones']),
                 is_multi_match(crop['Soil Texture'], row['Soil Texture']),
@@ -203,3 +211,4 @@ else:
 # --- Footer ---
 st.markdown("---")
 st.markdown("© Developed by Sasol Research & Technology: Feedstock (2025)")
+
