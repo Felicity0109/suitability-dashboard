@@ -200,6 +200,7 @@ if crop_file and climate_files:
         High=("Suitability Category", lambda x: (x=="High").mean()*100),
         Moderate=("Suitability Category", lambda x: (x=="Moderate").mean()*100),
         Low=("Suitability Category", lambda x: (x=="Low").mean()*100),
+        Main_Failure=("Failure Reasons", lambda x: x.value_counts().idxmax() if any(x != 'None') else 'None')
     ).reset_index()
 
     st.dataframe(summary, use_container_width=True)
@@ -211,4 +212,5 @@ else:
 # --- Footer ---
 st.markdown("---")
 st.markdown("© Developed by Sasol Research & Technology: Feedstock (2025)")
+
 
