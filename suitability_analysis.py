@@ -51,19 +51,16 @@ def check_failures(row, crop):
     failures = []
 
     # Temperature: crop must fit within area's range
-    if crop['Temp Min'] < row['Temp Min']:
-        failures.append('Temp Min')
-
-    # Fail if crop requires lower maximum temp than area allows
-    if crop['Temp Max'] > row['Temp Max']:
-        failures.append('Temp Max')
-
-    # Fail if crop requires more rainfall than area provides
-    if crop['Rainfall Min'] > row['Rainfall Min']:
+    if row['Rainfall Min'] < crop['Rainfall Min']:
         failures.append('Rainfall Min')
-
-    if crop['Rainfall Max'] > row['Rainfall Max']:
+    if row['Rainfall Max'] > crop['Rainfall Max']:
         failures.append('Rainfall Max')
+
+    # Temperature: min and max checks
+    if row['Temp Min'] < crop['Temp Min']:
+        failures.append('Temp Min')
+    if row['Temp Max'] > crop['Temp Max']:
+        failures.append('Temp Max')
 
     # Drought tolerance: strict equality
     if str(row['Drought Tolerance']).strip() != str(crop['Drought Tolerance']).strip():
@@ -91,15 +88,16 @@ def calculate_suitability(climate_df, crop_df):
         crop_name = crop['Crop Name']
         for _, row in climate_df.iterrows():
             score = sum([
-                    crop['Rainfall Min'] <= row['Rainfall Min'],   # match if crop min <= area min
-                    crop['Rainfall Max'] <= row['Rainfall Max'],   # match if crop max <= area max
-                    crop['Temp Min'] <= row['Temp Min'],           # match if crop min <= area min
-                    crop['Temp Max'] <= row['Temp Max'],           # match if crop max <= area max
-                    str(row['Drought Tolerance']).strip() == str(crop['Drought Tolerance']).strip(),
-                    is_multi_match(crop['Suitable Köppen Zones'], row['Suitable Köppen Zones']),
-                    is_multi_match(crop['Soil Texture'], row['Soil Texture']),
-                    is_multi_match(crop['Drainage Preference'], row['Drainage Preference']),
-                    str(row['Irrigation Need']).strip().lower() == str(crop['Irrigation Need']).strip().lower()])
+                row['Rainfall Min'] >= crop['Rainfall Min'],  # area provides enough min rainfall
+                row['Rainfall Max'] <= crop['Rainfall Max'],  # area does not exceed crop max
+                row['Temp Min'] >= crop['Temp Min'],          # area provides enough min temp
+                row['Temp Max'] <= crop['Temp Max'],          # area does not exceed crop max
+                str(row['Drought Tolerance']).strip() == str(crop['Drought Tolerance']).strip(),
+                is_multi_match(crop['Suitable Köppen Zones'], row['Suitable Köppen Zones']),
+                is_multi_match(crop['Soil Texture'], row['Soil Texture']),
+                is_multi_match(crop['Drainage Preference'], row['Drainage Preference']),
+                str(row['Irrigation Need']).strip().lower() == str(crop['Irrigation Need']).strip().lower()
+            ])
 
 
             results.append({
@@ -215,6 +213,7 @@ else:
 # --- Footer ---
 st.markdown("---")
 st.markdown("© Developed by Sasol Research & Technology: Feedstock (2025)")
+
 
 
 
